@@ -27,7 +27,6 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         script.c
         sqlite3.c
         sqlite3.h
-        ../../../Desktop/C test/.gitignore
         .gitignore
     )
 # Define target properties for Android with Qt 6 as:
