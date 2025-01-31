@@ -2,6 +2,7 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include "rule_set_container.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui {

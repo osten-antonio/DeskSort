@@ -1,3 +1,5 @@
 .qtcreator/
 build/
 script.exe
+sqlite3.h
+sqlite3.c
