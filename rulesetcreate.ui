@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>728</width>
+    <width>723</width>
     <height>423</height>
    </rect>
   </property>
@@ -123,21 +123,16 @@
        <height>128</height>
       </rect>
      </property>
-     <widget class="QLineEdit" name="lineEdit_2">
+     <widget class="QWidget" name="verticalLayoutWidget">
       <property name="geometry">
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>581</width>
-        <height>24</height>
+        <width>571</width>
+        <height>131</height>
        </rect>
       </property>
-      <property name="focusPolicy">
-       <enum>Qt::StrongFocus</enum>
-      </property>
-      <property name="text">
-       <string>Test</string>
-      </property>
+      <layout class="QVBoxLayout" name="sourcesLayout"/>
      </widget>
     </widget>
    </widget>

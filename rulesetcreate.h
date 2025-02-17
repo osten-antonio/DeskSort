@@ -4,6 +4,8 @@
 #include <QMainWindow>
 #include <vector>
 #include <string>
+#include <QVBoxLayout>
+
 
 namespace Ui {
 class rulesetCreate;
@@ -24,11 +26,13 @@ public:
     void deleteSource();
     void deleteFilter();
     void addEntry();
+    QVBoxLayout *getFiltersLayout();
+
 
 
 private:
     Ui::rulesetCreate *ui;
-
+    QVBoxLayout *filtersLayout;
     std::vector<std::string>* sources;
     std::vector<std::string>* filters;
     std::string *destination;
