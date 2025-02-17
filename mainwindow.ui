@@ -128,7 +128,7 @@
       <string>Git</string>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton">
+    <widget class="QPushButton" name="newRuleset">
      <property name="geometry">
       <rect>
        <x>10</x>

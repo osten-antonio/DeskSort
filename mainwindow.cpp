@@ -1,5 +1,8 @@
 #include "mainwindow.h"
 #include "./ui_mainwindow.h"
+#include <QPushButton>
+#include "rulesetCreate.h"
+#include <QDebug>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -25,8 +28,21 @@ MainWindow::MainWindow(QWidget *parent)
     ui->mainScroll->setWidget(containerWidget);
     ui->mainScroll->setWidgetResizable(true);
 
+    connect(ui->newRuleset,&QPushButton::clicked,this,&MainWindow::openCreateWindow);
+
 }
-MainWindow::~MainWindow()
-{
+
+MainWindow::~MainWindow() {
     delete ui;
+}
+
+void MainWindow::openCreateWindow() {
+    qDebug() << "test";
+    rulesetCreate *createWindow  = new rulesetCreate(this); // Edit params later
+    createWindow->show();
+    createWindow->raise();
+    this->setEnabled(false);
+    createWindow->setEnabled(true);
+    createWindow->setFocus();
+    qDebug() << "in";
 }

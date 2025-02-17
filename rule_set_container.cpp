@@ -50,3 +50,5 @@ rule_set_container::rule_set_container(QWidget *parent, int top, int left)
 void rule_set_container::updateDestinationLabel(const QString &newText){
     destination_label->setText(newText);
 }
+
+

@@ -39,11 +39,11 @@ int process(void *data, int argc, char **argv, char **azColName) {
         struct dirent *entry;
         while ((entry = readdir(dir)) != NULL) {
 
-            char fullPath[PATH_MAX];
+            char fullPath[32768];
             snprintf(fullPath, sizeof(fullPath), "%s\\%s", folders->source_path, entry->d_name);
 
             // Get file attributes
-            DWORD attrs = GetFileAttributes((wchar_t*)fullPath);
+            DWORD attrs = GetFileAttributes(fullPath);
             if((attrs & INVALID_FILE_ATTRIBUTES) ||
                 (attrs & FILE_ATTRIBUTE_DIRECTORY) ||
                 (attrs & FILE_ATTRIBUTE_REPARSE_POINT)){
@@ -81,6 +81,85 @@ int process(void *data, int argc, char **argv, char **azColName) {
     // If it matches perform move
     return 1;
 }
+
+int *get_destination_id() {
+    sqlite3_stmt *stmt;
+    const char *all_destination_query = "SELECT folder_id FROM destination";
+
+    if (sqlite3_prepare_v2(db, all_destination_query, -1, &stmt, NULL) != SQLITE_OK) {
+        return NULL;
+    }
+
+    int count = 0;
+    int *res = (int *)malloc(sizeof(int));
+
+    if (res == NULL) {
+        return NULL;
+    }
+
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+        int destination_id = sqlite3_column_int(stmt, 0);
+        printf("Fetched destination id: %d\n", destination_id);
+        res[count]= destination_id;
+
+        count++;
+        printf("\n%d",count);
+        res = (int *)realloc(res, count * sizeof(int));
+    }
+
+    sqlite3_finalize(stmt);
+    return res;
+}
+
+
+char **get_destination() {
+    sqlite3_stmt *stmt;
+    const char *all_destination_query = "SELECT folder_path FROM destination";
+
+    if (sqlite3_prepare_v2(db, all_destination_query, -1, &stmt, NULL) != SQLITE_OK) {
+        return NULL;
+    }
+
+    int capacity = 10;
+    int count = 0;
+    char **res = (char **)malloc(capacity * sizeof(char *));  // Allocate for 'capacity' pointers
+
+    if (res == NULL) {
+        return NULL;
+    }
+
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+        const char *destination_path = (const char *)sqlite3_column_text(stmt, 0);
+
+        if (count >= capacity) {
+            capacity *= 2;
+            res = (char **)realloc(res, capacity * sizeof(char *));
+            if (res == NULL) {
+                return NULL;
+            }
+        }
+
+        // Allocate memory for the string and copy it
+        res[count] = (char *)malloc(strlen(destination_path) + 1);  // +1 for the null terminator
+        if (res[count] == NULL) {
+            return NULL;
+        }
+
+        strcpy(res[count], destination_path);  // Copy the string into allocated memory
+        printf("Storing destination %d: %s\n", count + 1, res[count]);  // Debugging the result
+        count++;
+    }
+
+    sqlite3_finalize(stmt);
+
+    if (count < capacity) {
+        res = (char **)realloc(res, count * sizeof(char *));
+    }
+
+
+    return res;
+}
+
 
 int destination(int id, char *path){
     sqlite3_stmt *stmt;
@@ -136,6 +215,14 @@ int main_script(){
 }
 int main(){
     connect_db();
+
+    int *destinations = get_destination_id();
+
+    int i =0;
+    while (destinations[i] != 0) {
+        printf("\nDestination %d: %s\n", i + 1, destinations[i]);
+        i++;
+    }
     main_script();
     return 0;
 }

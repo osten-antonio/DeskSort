@@ -28,6 +28,10 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         sqlite3.c
         sqlite3.h
         .gitignore
+        sqlite3.c sqlite3.h
+        rulesetcreate.h rulesetcreate.cpp rulesetcreate.ui
+        filtercreate.h filtercreate.cpp filtercreate.ui
+
     )
 # Define target properties for Android with Qt 6 as:
 #    set_property(TARGET organizer APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR
