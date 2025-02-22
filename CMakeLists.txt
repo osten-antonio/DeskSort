@@ -31,6 +31,10 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         sqlite3.c sqlite3.h
         rulesetcreate.h rulesetcreate.cpp rulesetcreate.ui
         filtercreate.h filtercreate.cpp filtercreate.ui
+        editfilterscreen.h editfilterscreen.cpp editfilterscreen.ui
+        clickableframe.h clickableframe.cpp
+
+
 
     )
 # Define target properties for Android with Qt 6 as:

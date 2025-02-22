@@ -26,17 +26,21 @@ public:
     void deleteSource();
     void deleteFilter();
     void addEntry();
+    void addFilter(QString filter, QString type);
+    void setSelectedFilter(QString filter);
+    void setSelectedType(QString type);
+    QString getSelectedFilter();
+    QString getSelectedType();
     QVBoxLayout *getFiltersLayout();
-
-
 
 private:
     Ui::rulesetCreate *ui;
     QVBoxLayout *filtersLayout;
-    std::vector<std::string>* sources;
-    std::vector<std::string>* filters;
+    // std::unordered_map<std::string,std::string>* filters;
+    std::vector<std::pair<std::string,std::string>>* filters;
     std::string *destination;
-
+    QString selected_filter;
+    QString selected_type;
 };
 
 #endif // RULESETCREATE_H

@@ -20,6 +20,7 @@ public:
 private:
     Ui::filtercreate *ui;
     rulesetCreate* create_screen;
+    void selectFilter();
 };
 
 #endif // FILTERCREATE_H
