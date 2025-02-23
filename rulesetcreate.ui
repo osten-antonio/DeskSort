@@ -211,7 +211,7 @@
      <string>Delete</string>
     </property>
    </widget>
-   <widget class="QPushButton" name="delete_source_2">
+   <widget class="QPushButton" name="delete_filter">
     <property name="geometry">
      <rect>
       <x>600</x>

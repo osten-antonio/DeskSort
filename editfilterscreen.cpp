@@ -13,6 +13,7 @@ editfilterscreen::editfilterscreen(rulesetCreate *creationscreen, QString filter
     qDebug() << "inside";
     ui->lineEdit->setText(filter_to_edit);
     ui->comboBox->setCurrentText(type_to_edit);
+    this->creationscreen = creationscreen;
     connect(ui->pushButton,&QPushButton::clicked,this,&editfilterscreen::confirmedit);
 }
 
@@ -41,5 +42,7 @@ void editfilterscreen::confirmedit(){
     //add validation later
     setFilter(ui->lineEdit->text());
     setType(ui->comboBox->currentText());
-    this->destroy();
+    this->creationscreen->setSelectedFilter(ui->lineEdit->text());
+    this->creationscreen->setSelectedType(ui->comboBox->currentText());
+    this->accept();
 }

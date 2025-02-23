@@ -9,8 +9,9 @@
 
 filtercreate::filtercreate(rulesetCreate *create_screen,QWidget *parent)
     : QDialog(parent)
-    , ui(new Ui::filtercreate), create_screen(create_screen)
+    , ui(new Ui::filtercreate), create_screen(create_screen), filter(new QTextEdit),type(new QTextEdit)
 {
+    qDebug() << "filtercreate";
     ui->setupUi(this);
     connect(ui->pushButton,&QPushButton::clicked,this,&filtercreate::addFilter);
 }
@@ -20,11 +21,18 @@ filtercreate::~filtercreate()
     delete ui;
 }
 
+std::pair<QTextEdit*,QTextEdit*> filtercreate::get_labels(){
+    return std::make_pair(filter,type);
+}
+
+ClickableFrame* filtercreate::getFrame(){
+    return created_container;
+}
+
 void filtercreate::addFilter(){
     // validation and add to database
     qDebug() << ui->lineEdit->text();
     qDebug() << ui->comboBox->currentText();
-    this->destroy();
 
     create_screen->setEnabled(true);
 
@@ -38,14 +46,13 @@ void filtercreate::addFilter(){
     QHBoxLayout *containerLayout = new QHBoxLayout(container);
     containerLayout->setSpacing(0);
     containerLayout->setContentsMargins(0,0,0,0);
-    QTextEdit *filter = new QTextEdit();
+
     filter->setText(ui->lineEdit->text());
     filter->setEnabled(false);
     filter->setFixedSize(382,30);
     filter->setAttribute(Qt::WA_TransparentForMouseEvents);
     containerLayout->addWidget(filter);
 
-    QTextEdit *type = new QTextEdit();
     type->setText(ui->comboBox->currentText());
     type->setFixedSize(160,30);
     type->setEnabled(false);
@@ -57,6 +64,8 @@ void filtercreate::addFilter(){
 
     filtersLayout->addWidget(container);
     create_screen->addFilter(ui->lineEdit->text(),ui->comboBox->currentText());
+    created_container=container;
+    this->accept();
 }
 
 void filtercreate::selectFilter(){

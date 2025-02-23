@@ -24,6 +24,7 @@ private:
     Ui::editfilterscreen *ui;
     QString filter;
     QString type;
+    rulesetCreate* creationscreen;
 };
 
 #endif // EDITFILTERSCREEN_H

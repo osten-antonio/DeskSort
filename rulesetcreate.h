@@ -5,6 +5,8 @@
 #include <vector>
 #include <string>
 #include <QVBoxLayout>
+#include "clickableframe.h"
+#include <QTextEdit>
 
 
 namespace Ui {
@@ -38,6 +40,8 @@ private:
     QVBoxLayout *filtersLayout;
     // std::unordered_map<std::string,std::string>* filters;
     std::vector<std::pair<std::string,std::string>>* filters;
+    std::vector<std::pair<QTextEdit*,QTextEdit*>>* filters_labels;
+    std::vector<ClickableFrame*>* createdframe;
     std::string *destination;
     QString selected_filter;
     QString selected_type;
