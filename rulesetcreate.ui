@@ -38,7 +38,10 @@
     <string>Create</string>
    </property>
   </widget>
-  <widget class="QLineEdit" name="lineEdit">
+  <widget class="QLineEdit" name="destinationLabel">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="geometry">
     <rect>
      <x>90</x>
@@ -61,7 +64,7 @@
     <string>Destination</string>
    </property>
   </widget>
-  <widget class="QPushButton" name="pushButton_2">
+  <widget class="QPushButton" name="selectDestination">
    <property name="geometry">
     <rect>
      <x>630</x>
@@ -123,17 +126,6 @@
        <height>128</height>
       </rect>
      </property>
-     <widget class="QWidget" name="verticalLayoutWidget">
-      <property name="geometry">
-       <rect>
-        <x>0</x>
-        <y>0</y>
-        <width>571</width>
-        <height>131</height>
-       </rect>
-      </property>
-      <layout class="QVBoxLayout" name="sourcesLayout"/>
-     </widget>
     </widget>
    </widget>
    <widget class="QLabel" name="label_3">

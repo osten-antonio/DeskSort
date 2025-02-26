@@ -38,13 +38,20 @@ public:
 private:
     Ui::rulesetCreate *ui;
     QVBoxLayout *filtersLayout;
+    QVBoxLayout *sourcesLayout;
     // std::unordered_map<std::string,std::string>* filters;
     std::vector<std::pair<std::string,std::string>>* filters;
     std::vector<std::pair<QTextEdit*,QTextEdit*>>* filters_labels;
     std::vector<ClickableFrame*>* createdframe;
+    std::vector<ClickableFrame*>* sourceframe;
+    std::vector<std::string>* sources;
+    std::vector<QTextEdit*>* source_labels;
     std::string *destination;
+    std::string selected_source;
     QString selected_filter;
     QString selected_type;
+
+    void selectSource();
 };
 
 #endif // RULESETCREATE_H
