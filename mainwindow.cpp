@@ -13,14 +13,19 @@ MainWindow::MainWindow(QWidget *parent)
     QWidget *containerWidget = new QWidget();  // Stores all of the rule_set_container
 
     QVBoxLayout *layout = new QVBoxLayout(containerWidget);
+    std::vector<std::string> *sample_sources = new std::vector<std::string>();
+    for (int i = 0; i < 20; ++i) {
+        sample_sources->push_back(std::to_string(i));
+    }
 
 
     for (int i = 0; i < 10; ++i) {
         rule_set_container *customWidget = new rule_set_container(this);  // Create your custom widget
-        customWidget->updateDestinationLabel(QString::number(i));
+        // std::string temp = ;
+        customWidget->setDestination(std::to_string(i));
+        customWidget->setSources(sample_sources);
         customWidget->setFixedSize(771, 191);  // Set a fixed size for each widget
         layout->addWidget(customWidget);  // Add the custom widget to the layout
-
     }
 
     containerWidget->setLayout(layout);

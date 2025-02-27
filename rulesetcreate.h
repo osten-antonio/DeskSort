@@ -19,6 +19,8 @@ class rulesetCreate : public QMainWindow
 
 public:
     explicit rulesetCreate(QWidget *parent = nullptr); // const id smthsmth
+    explicit rulesetCreate(std::vector<std::pair<std::string,std::string>> *filters,std::vector<std::string> *sources
+                           , std::string destination, QWidget *parent = nullptr);
     ~rulesetCreate();
     void addFilters();
     void addSource();
@@ -46,12 +48,13 @@ private:
     std::vector<ClickableFrame*>* sourceframe;
     std::vector<std::string>* sources;
     std::vector<QTextEdit*>* source_labels;
-    std::string *destination;
+    std::string destination;
     std::string selected_source;
     QString selected_filter;
     QString selected_type;
 
     void selectSource();
+    void selectFilter();
 };
 
 #endif // RULESETCREATE_H

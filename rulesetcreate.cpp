@@ -15,6 +15,7 @@ rulesetCreate::rulesetCreate(QWidget *parent)
     , filters(new std::vector<std::pair<std::string,std::string>>), filters_labels(new std::vector<std::pair<QTextEdit*,QTextEdit*>>)
     , createdframe(new std::vector<ClickableFrame*>), sources(new std::vector<std::string>), source_labels(new std::vector<QTextEdit*>)
     , sourceframe(new std::vector<ClickableFrame*>)
+
 {
     ui->setupUi(this);
 
@@ -43,7 +44,86 @@ rulesetCreate::rulesetCreate(QWidget *parent)
     // connect(ui->edit_source,)
 }
 
+rulesetCreate::rulesetCreate(std::vector<std::pair<std::string,std::string>> *filters_args,std::vector<std::string> *sources_args
+                             , std::string destination, QWidget *parent)    : QMainWindow(parent)
+    , ui(new Ui::rulesetCreate)
+    , filters(new std::vector<std::pair<std::string,std::string>>), filters_labels(new std::vector<std::pair<QTextEdit*,QTextEdit*>>)
+    , createdframe(new std::vector<ClickableFrame*>), sources(new std::vector<std::string>), source_labels(new std::vector<QTextEdit*>)
+    , sourceframe(new std::vector<ClickableFrame*>){
+    qDebug() << "In rulesetCreate constructor, destination: " << QString::fromStdString(destination);
 
+    ui->setupUi(this);
+    ui->destinationLabel->setText(QString::fromStdString(destination));
+    QWidget *filtersWidget = new QWidget();
+    filtersLayout = new QVBoxLayout(filtersWidget);
+    filtersWidget->setLayout(filtersLayout);
+    ui->scrollArea_2->setWidget(filtersWidget);
+    ui->scrollArea_2->setWidgetResizable(true);
+
+
+    QWidget *sourcesWidget = new QWidget();
+    sourcesLayout = new QVBoxLayout(sourcesWidget);
+    sourcesWidget->setLayout(sourcesLayout);
+    ui->sourceArea->setWidget(sourcesWidget);
+    ui->sourceArea->setWidgetResizable(true);
+
+    for(std::pair<std::string,std::string> filter_pair:*filters_args){ // test this later pls
+        ClickableFrame *container = new ClickableFrame();
+        container->setFixedSize(540,30);
+
+        QHBoxLayout *containerLayout = new QHBoxLayout(container);
+        containerLayout->setSpacing(0);
+        containerLayout->setContentsMargins(0,0,0,0);
+        QTextEdit *type = new QTextEdit();
+        QTextEdit *filter = new QTextEdit();
+        filter->setText(QString::fromStdString(filter_pair.first));
+        filter->setEnabled(false);
+        filter->setFixedSize(382,30);
+        filter->setAttribute(Qt::WA_TransparentForMouseEvents);
+        containerLayout->addWidget(filter);
+
+        type->setText(QString::fromStdString(filter_pair.second));
+        type->setFixedSize(160,30);
+        type->setEnabled(false);
+        type->setAttribute(Qt::WA_TransparentForMouseEvents);
+        container->setFilter(QString::fromStdString(filter_pair.first));
+        container->setType(QString::fromStdString(filter_pair.second));
+        connect(container,&ClickableFrame::clicked,this,&rulesetCreate::selectFilter);
+        containerLayout->addWidget(type);
+
+        filtersLayout->addWidget(container);
+        addFilter(QString::fromStdString(filter_pair.first),QString::fromStdString(filter_pair.second));
+        createdframe->push_back(container);
+        filters_labels->push_back(std::make_pair(filter,type));
+    }
+
+    for(std::string source:*sources_args){
+        qDebug() << source;
+        sources->push_back(source);
+        ClickableFrame* container = new ClickableFrame(this);
+        container->setFixedSize(540,30);
+
+        QTextEdit* source_label = new QTextEdit(container);
+        source_label->setFixedSize(540,30);
+        source_label->setText(QString::fromStdString(source));
+        source_label->setEnabled(false);
+        source_label->setAttribute(Qt::WA_TransparentForMouseEvents);
+        std::string source_text = source_label->toPlainText().toStdString();
+        container->setSource(QString::fromStdString(source));
+        connect(container,&ClickableFrame::clicked,this,&rulesetCreate::selectSource);
+        sourceframe->push_back(container);
+        source_labels->push_back(source_label);
+        sourcesLayout->addWidget(container);
+    }
+    ui->pushButton->setText("Edit");
+    connect(ui->add_filter,&QPushButton::clicked,this,&rulesetCreate::addFilters);
+    connect(ui->edit_filter,&QPushButton::clicked,this,&rulesetCreate::editFilter);
+    connect(ui->delete_filter,&QPushButton::clicked,this,&rulesetCreate::deleteFilter);
+    connect(ui->selectDestination,&QPushButton::clicked,this,&rulesetCreate::selectDestination);
+    connect(ui->add_source,&QPushButton::clicked,this,&rulesetCreate::addSource);
+    connect(ui->edit_source,&QPushButton::clicked,this,&rulesetCreate::editSource);
+    connect(ui->delete_source,&QPushButton::clicked,this,&rulesetCreate::deleteSource);
+}
 rulesetCreate::~rulesetCreate()
 {
     if (filters) {
@@ -196,12 +276,10 @@ void rulesetCreate::addFilter(QString filter, QString type){
     filters->push_back(std::make_pair(filter.toStdString(),type.toStdString()));
 }
 
-/*    void addFilters();
-    void addSource();
-    void editFilter();
-    void editSource();
-    void selectDestination();
-    void deleteSource();
-    void deleteFilter();
-    void addEntry();
-*/
+void rulesetCreate::selectFilter(){
+    ClickableFrame *clickedFrame = qobject_cast<ClickableFrame *>(sender());
+    this->setSelectedFilter(clickedFrame->getFilter());
+    this->setSelectedType(clickedFrame->getType());
+    qDebug() << "kgmjnoisngmklgn";
+}
+
