@@ -9,6 +9,8 @@
 #include <QFileDialog>
 
 
+
+
 rulesetCreate::rulesetCreate(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::rulesetCreate)
@@ -41,6 +43,7 @@ rulesetCreate::rulesetCreate(QWidget *parent)
     connect(ui->add_source,&QPushButton::clicked,this,&rulesetCreate::addSource);
     connect(ui->edit_source,&QPushButton::clicked,this,&rulesetCreate::editSource);
     connect(ui->delete_source,&QPushButton::clicked,this,&rulesetCreate::deleteSource);
+    connect(ui->pushButton,&QPushButton::clicked,this,&rulesetCreate::addEntry);
     // connect(ui->edit_source,)
 }
 
@@ -172,10 +175,13 @@ void rulesetCreate::selectSource(){
     ClickableFrame *clickedFrame = qobject_cast<ClickableFrame *>(sender());
     selected_source=clickedFrame->getSource().toStdString();
 }
-
-void rulesetCreate::addEntry(){
-
+void rulesetCreate::addEntry() {
+    // Convert C++ datatype to C ffs
+    this->destroy();
 }
+
+
+
 
 void rulesetCreate::editFilter(){
     auto search_pointer = std::find(filters->begin(), filters->end(), std::make_pair(selected_filter.toStdString(), selected_type.toStdString()));

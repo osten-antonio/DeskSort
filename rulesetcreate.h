@@ -7,7 +7,9 @@
 #include <QVBoxLayout>
 #include "clickableframe.h"
 #include <QTextEdit>
-
+extern "C" {
+#include "script.h" // Include the C header for write_entry
+}
 
 namespace Ui {
 class rulesetCreate;
@@ -18,6 +20,7 @@ class rulesetCreate : public QMainWindow
     Q_OBJECT
 
 public:
+
     explicit rulesetCreate(QWidget *parent = nullptr); // const id smthsmth
     explicit rulesetCreate(std::vector<std::pair<std::string,std::string>> *filters,std::vector<std::string> *sources
                            , std::string destination, QWidget *parent = nullptr);
@@ -36,6 +39,7 @@ public:
     QString getSelectedFilter();
     QString getSelectedType();
     QVBoxLayout *getFiltersLayout();
+
 
 private:
     Ui::rulesetCreate *ui;

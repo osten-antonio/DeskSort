@@ -1,18 +1,7 @@
-#include <stdio.h>
-#include "sqlite3.h"
-#include <stdlib.h>
-#include <dirent.h>
-#include <string.h>
-#include <windows.h>
-#include <stdio.h>
+#include "script.h"
+
 
 sqlite3 *db;
-
-typedef struct {
-    char *destination_path;
-    char *source_path;
-} folderPair;
-
 int connect_db(){
     int rc = sqlite3_open("entries.db", &db);
     if(rc){
@@ -83,6 +72,7 @@ int process(void *data, int argc, char **argv, char **azColName) {
 }
 
 int *get_destination_id() {
+    /*
     sqlite3_stmt *stmt;
     const char *all_destination_query = "SELECT folder_id FROM destination";
 
@@ -109,8 +99,68 @@ int *get_destination_id() {
 
     sqlite3_finalize(stmt);
     return res;
+*/
 }
 
+int write_entry(char** source, char* destination, filterPair *filters){
+    int* source_ids = (int*)malloc(sizeof(int));
+    int* filter_ids = (int*)malloc(sizeof(int));
+    char cur_query[256];
+    sqlite3_stmt *stmt;
+    int count = 1;
+    const char* get_recent_destination = "SELECT max(folder_id) FROM destination";
+    const char* get_recent_source = "SELECT max(folder_id) FROM source";
+    const char* get_recent_filter = "SELECT max(folder_id) FROM filter";
+
+    snprintf(cur_query,sizeof(cur_query),"INSERT INTO destination(folder_path) VALUES(%s)",destination);
+    if(sqlite3_prepare_v2(db,cur_query,-1,&stmt,NULL) != SQLITE_OK){
+        return -1;
+    }
+    if(sqlite3_prepare_v2(db,get_recent_destination,-1,&stmt,NULL) != SQLITE_OK){
+        return -1;
+    }
+    int destination_id = sqlite3_column_int(stmt,0);
+
+    for(int i = 0;i<sizeof(*source)/sizeof(char*);i++){ // Insert into source table, then push the recent id to array
+        snprintf(cur_query,sizeof(cur_query),"INSERT INTO source(folder_path) VALUES(%s)",source[i]);
+        if(sqlite3_prepare_v2(db,cur_query,-1,&stmt,NULL) != SQLITE_OK){
+            return -1;
+        }
+        if(sqlite3_prepare_v2(db,get_recent_source,-1,&stmt,NULL) != SQLITE_OK){
+            return -1;
+        }
+        source_ids[count-1] = sqlite3_column_int(stmt,0);
+        source_ids= (int*)realloc(source_ids,++count*sizeof(int));
+    }
+
+    count = 0;
+
+    for(int i = 0;i<sizeof(*filters)/sizeof(filterPair);i++){ // Same thing here but for filter
+        snprintf(cur_query,sizeof(cur_query),"INSERT INTO filter(filter,filter_type) VALUES(%s,%s)",filters[i].filter,filters[i].type);
+        if(sqlite3_prepare_v2(db,cur_query,-1,&stmt,NULL) != SQLITE_OK){
+            return -1;
+        }
+        if(sqlite3_prepare_v2(db,get_recent_source,-1,&stmt,NULL) != SQLITE_OK){
+            return -1;
+        }
+        filter_ids[count-1] = sqlite3_column_int(stmt,0);
+        filter_ids= (int*)realloc(filter_ids,++count*sizeof(int));
+    }
+
+    for(int i = 0;i<sizeof(*source_ids)/sizeof(int);i++){
+        for(int j = 0;j<sizeof(*filter_ids)/sizeof(int);j++){
+            snprintf(cur_query,sizeof(cur_query),
+                     "INSERT INTO link(filter_id,source_folder_id,destination_folder_id) VALUES(%d,%d,%d)",
+                     filter_ids[j],source_ids[i],destination_id); // writes every combination because many-to-many relationship
+            if(sqlite3_prepare_v2(db,cur_query,-1,&stmt,NULL) != SQLITE_OK){
+                return -1;
+            }
+        }
+    }
+
+    return 0;
+
+}
 
 char **get_destination() {
     sqlite3_stmt *stmt;
@@ -213,19 +263,19 @@ int main_script(){
     return 0;
 
 }
-int main(){
-    connect_db();
+// int main(){
+//     connect_db();
 
-    int *destinations = get_destination_id();
+//     int *destinations = get_destination_id();
 
-    int i =0;
-    while (destinations[i] != 0) {
-        printf("\nDestination %d: %s\n", i + 1, destinations[i]);
-        i++;
-    }
-    main_script();
-    return 0;
-}
+//     int i =0;
+//     while (destinations[i] != 0) {
+//         printf("\nDestination %d: %s\n", i + 1, destinations[i]);
+//         i++;
+//     }
+//     main_script();
+//     return 0;
+// }
 
 /*
 gcc -o script script.c sqlite3.c -IC:\MinGW\include
