@@ -177,6 +177,26 @@ void rulesetCreate::selectSource(){
 }
 void rulesetCreate::addEntry() {
     // Convert C++ datatype to C ffs
+    /* std::vector<std::pair<std::string,std::string>>* filters;
+     * std::vector<std::string>* sources;
+     * std::string destination;
+    */
+    // write_entry()
+
+    char* destination_c = strdup(destination.c_str());
+    char** sources_c = new char*[sources->size()];
+    int count = 1;
+    for(int i =0;i<sources->size();i++){
+        sources_c[i] = strdup(sources->at(i).c_str());
+    }
+    filterPair *filters_c = new filterPair[filters->size()];
+    for(int i=0;i<filters->size();i++){
+        filters_c[i].filter=strdup(filters->at(i).first.c_str());
+        filters_c[i].type=strdup(filters->at(i).second.c_str());
+    }
+
+    int res = write_entry(sources_c,sources->size(),destination_c,filters_c,filters->size());
+    qDebug() << res;
     this->destroy();
 }
 
@@ -221,6 +241,7 @@ void rulesetCreate::selectDestination(){
                                                     QFileDialog::ShowDirsOnly
                                                         | QFileDialog::DontResolveSymlinks);
     ui->destinationLabel->setText(dir);
+    destination = dir.toStdString();
 }
 
 void rulesetCreate::deleteSource(){

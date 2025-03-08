@@ -102,65 +102,112 @@ int *get_destination_id() {
 */
 }
 
-int write_entry(char** source, char* destination, filterPair *filters){
-    int* source_ids = (int*)malloc(sizeof(int));
-    int* filter_ids = (int*)malloc(sizeof(int));
-    char cur_query[256];
-    sqlite3_stmt *stmt;
-    int count = 1;
-    const char* get_recent_destination = "SELECT max(folder_id) FROM destination";
-    const char* get_recent_source = "SELECT max(folder_id) FROM source";
-    const char* get_recent_filter = "SELECT max(folder_id) FROM filter";
+int write_entry(char** source, int source_count, char* destination, filterPair* filters, int filter_count) {
+    connect_db();
 
-    snprintf(cur_query,sizeof(cur_query),"INSERT INTO destination(folder_path) VALUES(%s)",destination);
-    if(sqlite3_prepare_v2(db,cur_query,-1,&stmt,NULL) != SQLITE_OK){
+    int* source_ids = (int*)malloc(source_count * sizeof(int));
+    int* filter_ids = (int*)malloc(filter_count * sizeof(int));
+
+    if (!source_ids || !filter_ids) {
+        free(source_ids);
+        free(filter_ids);
         return -1;
     }
-    if(sqlite3_prepare_v2(db,get_recent_destination,-1,&stmt,NULL) != SQLITE_OK){
-        return -1;
+
+    sqlite3_stmt* stmt = NULL;
+    int destination_id, error_id;
+
+    if (sqlite3_prepare_v2(db, "INSERT INTO destination(folder_path) VALUES(?)", -1, &stmt, NULL) != SQLITE_OK) {
+        error_id = -2;
+        goto cleanup;
     }
-    int destination_id = sqlite3_column_int(stmt,0);
+    if (sqlite3_bind_text(stmt, 1, destination, -1, SQLITE_TRANSIENT) != SQLITE_OK) {
+        error_id = -3;
+        goto cleanup;
+    }
+    if (sqlite3_step(stmt) != SQLITE_DONE) {
+        error_id = -4;
+        goto cleanup;
+    }
+    sqlite3_finalize(stmt);
+    stmt = NULL;
 
-    for(int i = 0;i<sizeof(*source)/sizeof(char*);i++){ // Insert into source table, then push the recent id to array
-        snprintf(cur_query,sizeof(cur_query),"INSERT INTO source(folder_path) VALUES(%s)",source[i]);
-        if(sqlite3_prepare_v2(db,cur_query,-1,&stmt,NULL) != SQLITE_OK){
-            return -1;
+
+    destination_id = sqlite3_last_insert_rowid(db); //
+
+    // sources
+    for (int i = 0; i < source_count; i++) {
+        if (sqlite3_prepare_v2(db, "INSERT INTO source(folder_path) VALUES(?)", -1, &stmt, NULL) != SQLITE_OK) {
+            error_id = -5;
+            goto cleanup;
         }
-        if(sqlite3_prepare_v2(db,get_recent_source,-1,&stmt,NULL) != SQLITE_OK){
-            return -1;
+        if (sqlite3_bind_text(stmt, 1, source[i], -1, SQLITE_TRANSIENT) != SQLITE_OK) {
+            error_id = -6;
+            goto cleanup;
         }
-        source_ids[count-1] = sqlite3_column_int(stmt,0);
-        source_ids= (int*)realloc(source_ids,++count*sizeof(int));
+        if (sqlite3_step(stmt) != SQLITE_DONE) {
+            error_id = -7;
+            goto cleanup;
+        }
+        source_ids[i] = sqlite3_last_insert_rowid(db);
+        sqlite3_finalize(stmt);
+        stmt = NULL;
     }
 
-    count = 0;
-
-    for(int i = 0;i<sizeof(*filters)/sizeof(filterPair);i++){ // Same thing here but for filter
-        snprintf(cur_query,sizeof(cur_query),"INSERT INTO filter(filter,filter_type) VALUES(%s,%s)",filters[i].filter,filters[i].type);
-        if(sqlite3_prepare_v2(db,cur_query,-1,&stmt,NULL) != SQLITE_OK){
-            return -1;
+    // filters
+    for (int i = 0; i < filter_count; i++) {
+        if (sqlite3_prepare_v2(db, "INSERT INTO filters(filter, filter_type) VALUES(?, ?)", -1, &stmt, NULL) != SQLITE_OK) {
+            error_id = -8;
+            goto cleanup;
         }
-        if(sqlite3_prepare_v2(db,get_recent_source,-1,&stmt,NULL) != SQLITE_OK){
-            return -1;
+        if (sqlite3_bind_text(stmt, 1, filters[i].filter, -1, SQLITE_TRANSIENT) != SQLITE_OK) {
+            error_id = -9;
+            goto cleanup;
         }
-        filter_ids[count-1] = sqlite3_column_int(stmt,0);
-        filter_ids= (int*)realloc(filter_ids,++count*sizeof(int));
+        if (sqlite3_bind_text(stmt, 2, filters[i].type, -1, SQLITE_TRANSIENT) != SQLITE_OK) {
+            error_id = -10;
+            goto cleanup;
+        }
+        if (sqlite3_step(stmt) != SQLITE_DONE) {
+            error_id = -11;
+            goto cleanup;
+        }
+        filter_ids[i] = sqlite3_last_insert_rowid(db);
+        sqlite3_finalize(stmt);
+        stmt = NULL;
     }
-
-    for(int i = 0;i<sizeof(*source_ids)/sizeof(int);i++){
-        for(int j = 0;j<sizeof(*filter_ids)/sizeof(int);j++){
-            snprintf(cur_query,sizeof(cur_query),
-                     "INSERT INTO link(filter_id,source_folder_id,destination_folder_id) VALUES(%d,%d,%d)",
-                     filter_ids[j],source_ids[i],destination_id); // writes every combination because many-to-many relationship
-            if(sqlite3_prepare_v2(db,cur_query,-1,&stmt,NULL) != SQLITE_OK){
-                return -1;
+    for (int i = 0; i < source_count; i++) {
+        for (int j = 0; j < filter_count; j++) {
+            if (sqlite3_prepare_v2(db, "INSERT INTO link(filter_id, source_folder_id, destination_folder_id) VALUES(?, ?, ?)", -1, &stmt, NULL) != SQLITE_OK) {
+                error_id = -12;
+                goto cleanup;
             }
+            if (sqlite3_bind_int(stmt, 1, filter_ids[j]) != SQLITE_OK ||
+                sqlite3_bind_int(stmt, 2, source_ids[i]) != SQLITE_OK ||
+                sqlite3_bind_int(stmt, 3, destination_id) != SQLITE_OK) {
+                error_id = -13;
+                goto cleanup;
+            }
+            if (sqlite3_step(stmt) != SQLITE_DONE) {
+                error_id = -14;
+                goto cleanup;
+            }
+            sqlite3_finalize(stmt);
+            stmt = NULL;
         }
     }
 
-    return 0;
+    error_id = 0;
 
+cleanup:
+    if (stmt) sqlite3_finalize(stmt);
+    free(source_ids);
+    free(filter_ids);
+
+    return error_id;
 }
+
+
 
 char **get_destination() {
     sqlite3_stmt *stmt;

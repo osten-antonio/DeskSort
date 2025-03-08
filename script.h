@@ -30,7 +30,7 @@ extern "C" {
 int connect_db();
 int process(void *data, int argc, char **argv, char **azColName);
 int* get_destination_id();
-int write_entry(char** source, char* destination, filterPair *filters);
+int write_entry(char** source, int source_count, char* destination, filterPair* filters, int filter_count);
 char** get_destination();
 int destination(int id, char *path);
 int main_script();
