@@ -10,26 +10,25 @@ int connect_db(){
     return 0;
 }
 // argv[0] = filter, argv[1] = filter_type
-int process(void *data, int argc, char **argv, char **azColName) {
 
-    folderPair *folders = (folderPair *)data;
+int process(folderPair destination_data,const char* filter,const char* filter_type) {
 
-    DIR *dir = opendir(folders->source_path);
-    if(folders->source_path[strlen(folders->source_path)-1] != '\\'){
+    DIR *dir = opendir(destination_data.source_path);
+    if(destination_data.source_path[strlen(destination_data.source_path)-1] != '\\'){
         // Ensures that path is in right format \ or no \ //
-        folders->source_path[strlen(folders->source_path)] = '\\';
-        folders->source_path[strlen(folders->source_path)+1] = '\0';
+        destination_data.source_path[strlen(destination_data.source_path)] = '\\';
+        destination_data.source_path[strlen(destination_data.source_path)+1] = '\0';
     }
 
     if(!dir){
         return 0;
     }
-    if(!strcmp(argv[1],"prefix")){
+    if(!strcmp(filter_type,"prefix")){
         struct dirent *entry;
         while ((entry = readdir(dir)) != NULL) {
 
             char fullPath[32768];
-            snprintf(fullPath, sizeof(fullPath), "%s\\%s", folders->source_path, entry->d_name);
+            snprintf(fullPath, sizeof(fullPath), "%s\\%s", destination_data.source_path, entry->d_name);
 
             // Get file attributes
             DWORD attrs = GetFileAttributes(fullPath);
@@ -49,7 +48,7 @@ int process(void *data, int argc, char **argv, char **azColName) {
                 continue;
             }
 
-            if(!strncmp(entry->d_name, argv[0], strlen(argv[0]))){
+            if(!strncmp(entry->d_name, filter, strlen(filter))){
                 // move
             }
             printf("%s\n", entry->d_name);
@@ -57,11 +56,11 @@ int process(void *data, int argc, char **argv, char **azColName) {
 
 
 
-    }else if(!strcmp(argv[1],"suffix")){
+    }else if(!strcmp(filter_type,"suffix")){
 
-    }else if(!strcmp(argv[1],"containing")){
+    }else if(!strcmp(filter_type,"containing")){
 
-    }else if(!strcmp(argv[1],"extension")){
+    }else if(!strcmp(filter_type,"extension")){
 
     }
 
@@ -72,38 +71,54 @@ int process(void *data, int argc, char **argv, char **azColName) {
 }
 
 int *get_destination_id() {
-    /*
+    if(connect_db()==0){
+        return 0;
+    }
     sqlite3_stmt *stmt;
-    const char *all_destination_query = "SELECT folder_id FROM destination";
 
-    if (sqlite3_prepare_v2(db, all_destination_query, -1, &stmt, NULL) != SQLITE_OK) {
+
+    if(sqlite3_prepare_v2(db,"SELECT COUNT(*) FROM destination",-1,&stmt,NULL)!=SQLITE_OK){
         return NULL;
     }
 
+    int destination_count = 0;
+    if (sqlite3_step(stmt) == SQLITE_ROW) {
+        destination_count = sqlite3_column_int(stmt, 0);
+    }
+
+    sqlite3_finalize(stmt);
+    stmt = NULL;
+
+    if(destination_count==0){
+        return NULL;
+    }
+
+
     int count = 0;
-    int *res = (int *)malloc(sizeof(int));
+    int *res = (int *)malloc(destination_count*sizeof(int)+1);
 
     if (res == NULL) {
         return NULL;
     }
-
-    while (sqlite3_step(stmt) == SQLITE_ROW) {
-        int destination_id = sqlite3_column_int(stmt, 0);
-        printf("Fetched destination id: %d\n", destination_id);
-        res[count]= destination_id;
-
-        count++;
-        printf("\n%d",count);
-        res = (int *)realloc(res, count * sizeof(int));
+    if (sqlite3_prepare_v2(db, "SELECT folder_id FROM destination", -1, &stmt, NULL) != SQLITE_OK) {
+        free(res);
+        return NULL;
     }
 
+
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+        res[count++]= sqlite3_column_int(stmt, 0);
+    }
+
+    res[destination_count+1]=-1;
     sqlite3_finalize(stmt);
     return res;
-*/
 }
 
 int write_entry(char** source, int source_count, char* destination, filterPair* filters, int filter_count) {
-    connect_db();
+    if(connect_db()==0){
+        return 0;
+    }
 
     int* source_ids = (int*)malloc(source_count * sizeof(int));
     int* filter_ids = (int*)malloc(filter_count * sizeof(int));
@@ -210,16 +225,31 @@ cleanup:
 
 
 char **get_destination() {
+    if(connect_db()==0){
+        return 0;
+    }
     sqlite3_stmt *stmt;
-    const char *all_destination_query = "SELECT folder_path FROM destination";
 
-    if (sqlite3_prepare_v2(db, all_destination_query, -1, &stmt, NULL) != SQLITE_OK) {
+    if (sqlite3_prepare_v2(db, "SELECT count(*) FROM destination", -1, &stmt, NULL) != SQLITE_OK) {
+        return NULL;
+    }
+    if(sqlite3_step(stmt)!=SQLITE_ROW){
+        return NULL;
+    }
+    int size = sqlite3_column_int(stmt,0);
+    sqlite3_finalize(stmt);
+    stmt=NULL;
+
+    if(size==0){
         return NULL;
     }
 
-    int capacity = 10;
+    if (sqlite3_prepare_v2(db, "SELECT folder_path FROM destination", -1, &stmt, NULL) != SQLITE_OK) {
+        return NULL;
+    }
+
     int count = 0;
-    char **res = (char **)malloc(capacity * sizeof(char *));  // Allocate for 'capacity' pointers
+    char **res = (char **)malloc(size* sizeof(char *));
 
     if (res == NULL) {
         return NULL;
@@ -227,67 +257,76 @@ char **get_destination() {
 
     while (sqlite3_step(stmt) == SQLITE_ROW) {
         const char *destination_path = (const char *)sqlite3_column_text(stmt, 0);
-
-        if (count >= capacity) {
-            capacity *= 2;
-            res = (char **)realloc(res, capacity * sizeof(char *));
-            if (res == NULL) {
-                return NULL;
-            }
-        }
-
-        // Allocate memory for the string and copy it
-        res[count] = (char *)malloc(strlen(destination_path) + 1);  // +1 for the null terminator
+        if (!destination_path) destination_path = "";
+        res[count]=strdup(destination_path);
         if (res[count] == NULL) {
+            for (int i = 0; i < size; i++) {
+                free(res[i]);
+            }
+            free(res);
             return NULL;
         }
 
-        strcpy(res[count], destination_path);  // Copy the string into allocated memory
-        printf("Storing destination %d: %s\n", count + 1, res[count]);  // Debugging the result
         count++;
     }
 
     sqlite3_finalize(stmt);
-
-    if (count < capacity) {
-        res = (char **)realloc(res, count * sizeof(char *));
-    }
-
 
     return res;
 }
 
 
 int destination(int id, char *path){
-    sqlite3_stmt *stmt;
-    char destination_query[256];
-    snprintf(destination_query, sizeof(destination_query),
-             "SELECT destination.folder_path, destination.folder_id "
-             "FROM destination "
-             "INNER JOIN link ON link.destination_folder_id = destination.folder_id "
-             "WHERE link.source_folder_id = %d;", id);
-    if(sqlite3_prepare_v2(db,destination_query, -1, &stmt, NULL) != SQLITE_OK){
-        fprintf(stderr, "Failed to load destination for %s: %s\n", path,sqlite3_errmsg(db));
+    if(connect_db()==0){
         return 0;
     }
-    while(sqlite3_step(stmt) == SQLITE_ROW){
-        char filter_query[256];
-        char *destination_path = (char *)sqlite3_column_text(stmt, 0);
-        folderPair data = { destination_path, path };
+    sqlite3_stmt *stmt;
+    const char* destination_query="SELECT destination.folder_path, destination.folder_id "
+                              "FROM destination "
+                              "INNER JOIN link ON link.destination_folder_id = destination.folder_id "
+                              "WHERE link.source_folder_id = (?);";
 
-        snprintf(filter_query, sizeof(filter_query),
-                 "SELECT filters.filter, filters.filter_type "
-                 "FROM filters INNER JOIN "
-                 "link ON link.filter_id = filters.filter_id "
-                 "WHERE link.source_folder_id = %d AND link.destination_folder_id = %d",
-                 id,sqlite3_column_int(stmt,1));
-        int filters = sqlite3_exec(db,filter_query,process,&data,0);
-        if(filters != SQLITE_OK){
-            fprintf(stderr, "SQL error: %s\n", sqlite3_errmsg(db));
-        } else{
-            printf("done");
-        }
+    if(sqlite3_prepare_v2(db,destination_query, -1, &stmt, NULL) != SQLITE_OK){
+        return -1;
     }
+    if(sqlite3_bind_int(stmt,1,id)!=SQLITE_OK){
+        sqlite3_finalize(stmt);
+        return -2;
+    }
+    while(sqlite3_step(stmt) == SQLITE_ROW){
+        char *destination_path = (char *)sqlite3_column_text(stmt, 0);
+        if (!destination_path) destination_path = "";
+        folderPair data = { destination_path, path };
+        sqlite3_stmt *stmt2;
+
+        if(sqlite3_prepare_v2(db,"SELECT filters.filter, filters.filter_type FROM filters INNER JOIN link ON "
+                                   "link.filter_id=filters.filter_id WHERE link.source_folder_id = (?) AND"
+                                   "link.destination_folder_id = (?)",-1,&stmt2,NULL)!=SQLITE_OK){
+            sqlite3_finalize(stmt);
+            return -3;
+        }
+        if(sqlite3_bind_int(stmt2,1,id)!=SQLITE_OK){
+            sqlite3_finalize(stmt2);
+            sqlite3_finalize(stmt);
+            return -4;
+        }
+        if(sqlite3_bind_int(stmt2,2,sqlite3_column_int(stmt,1))!=SQLITE_OK){
+            sqlite3_finalize(stmt2);
+            sqlite3_finalize(stmt);
+            return -5;
+        }
+        while(sqlite3_step(stmt2)==SQLITE_ROW){
+            const char *filter_value = (const char *)sqlite3_column_text(stmt2, 0);
+            const char *filter_type = (const char *)sqlite3_column_text(stmt2, 1);
+
+            if (!filter_value) filter_value = "";
+            if (!filter_type) filter_type = "";
+
+            process(data, filter_value, filter_type);
+        }
+        sqlite3_finalize(stmt2);
+    }
+    sqlite3_finalize(stmt);
     return 0;
 }
 
@@ -295,8 +334,6 @@ int main_script(){
     sqlite3_stmt *stmt;
     const char *source_query = "SELECT * from source";
     if (sqlite3_prepare_v2(db, source_query, -1, &stmt, NULL) != SQLITE_OK) {
-        fprintf(stderr, "Failed to load sources: %s\n", sqlite3_errmsg(db));
-        sqlite3_close(db);
         return 1;
     }
     while (sqlite3_step(stmt) == SQLITE_ROW) {
