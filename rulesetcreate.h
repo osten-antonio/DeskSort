@@ -25,17 +25,10 @@ public:
     explicit rulesetCreate(std::vector<std::pair<std::string,std::string>> *filters,std::vector<std::string> *sources
                            , std::string destination, QWidget *parent = nullptr);
     ~rulesetCreate();
-    void addFilters();
-    void addSource();
-    void editFilter();
-    void editSource();
-    void selectDestination();
-    void deleteSource();
-    void deleteFilter();
-    void addEntry();
-    void addFilter(QString filter, QString type);
-    void setSelectedFilter(QString filter);
     void setSelectedType(QString type);
+    void setSelectedFilter(QString filter);
+
+    void addFilter(QString filter, QString type);
     QString getSelectedFilter();
     QString getSelectedType();
     QVBoxLayout *getFiltersLayout();
@@ -56,7 +49,15 @@ private:
     std::string selected_source;
     QString selected_filter;
     QString selected_type;
-
+    void addFilters();
+    void addSource();
+    void editFilter();
+    void editSource();
+    void selectDestination();
+    void deleteSource();
+    void deleteFilter();
+    void addEntry();
+    void editEntry(entry* prev_entry);
     void selectSource();
     void selectFilter();
 };

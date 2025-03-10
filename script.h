@@ -22,6 +22,17 @@ typedef struct{
     char* type;
 } filterPair;
 
+typedef struct {
+    char** source;
+    int source_count;
+    char* destination;
+    filterPair* filters;
+    int filter_count;
+} entry;
+
+
+
+
 // C++ linkage specification
 #ifdef __cplusplus
 extern "C" {
@@ -29,7 +40,8 @@ extern "C" {
 
 int connect_db();
 int* get_destination_id();
-int write_entry(char** source, int source_count, char* destination, filterPair* filters, int filter_count);
+int write_entry(entry* entry_arg);
+int update_entry(entry* entry_arg, entry* prev_entry);
 char** get_destination();
 int destination(int id, char *path);
 int main_script();

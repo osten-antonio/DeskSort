@@ -47,13 +47,34 @@ rulesetCreate::rulesetCreate(QWidget *parent)
     // connect(ui->edit_source,)
 }
 
+// update
 rulesetCreate::rulesetCreate(std::vector<std::pair<std::string,std::string>> *filters_args,std::vector<std::string> *sources_args
                              , std::string destination, QWidget *parent)    : QMainWindow(parent)
     , ui(new Ui::rulesetCreate)
     , filters(new std::vector<std::pair<std::string,std::string>>), filters_labels(new std::vector<std::pair<QTextEdit*,QTextEdit*>>)
     , createdframe(new std::vector<ClickableFrame*>), sources(new std::vector<std::string>), source_labels(new std::vector<QTextEdit*>)
     , sourceframe(new std::vector<ClickableFrame*>){
-    qDebug() << "In rulesetCreate constructor, destination: " << QString::fromStdString(destination);
+
+
+    // convert to c
+    char* prev_destination_c = strdup(destination.c_str());
+    char** prev_sources_c = new char*[sources_args->size()];
+    int count = 1;
+    for(int i =0;i<sources_args->size();i++){
+        prev_sources_c[i] = strdup(sources_args->at(i).c_str());
+    }
+    filterPair *prev_filters_c = new filterPair[filters_args->size()];
+    for(int i=0;i<filters_args->size();i++){
+        prev_filters_c[i].filter=strdup(filters_args->at(i).first.c_str());
+        prev_filters_c[i].type=strdup(filters_args->at(i).second.c_str());
+    }
+    entry* prev_entry_arg;
+    prev_entry_arg->source = prev_sources_c;
+    prev_entry_arg->source_count=sources_args->size();
+    prev_entry_arg->destination=prev_destination_c;
+    prev_entry_arg->filters=prev_filters_c;
+    prev_entry_arg->filter_count=filters_args->size();
+
 
     ui->setupUi(this);
     ui->destinationLabel->setText(QString::fromStdString(destination));
@@ -126,6 +147,9 @@ rulesetCreate::rulesetCreate(std::vector<std::pair<std::string,std::string>> *fi
     connect(ui->add_source,&QPushButton::clicked,this,&rulesetCreate::addSource);
     connect(ui->edit_source,&QPushButton::clicked,this,&rulesetCreate::editSource);
     connect(ui->delete_source,&QPushButton::clicked,this,&rulesetCreate::deleteSource);
+    connect(ui->pushButton,&QPushButton::clicked,this,[this,prev_entry_arg](){
+        editEntry(prev_entry_arg);
+    });
 }
 rulesetCreate::~rulesetCreate()
 {
@@ -175,6 +199,30 @@ void rulesetCreate::selectSource(){
     ClickableFrame *clickedFrame = qobject_cast<ClickableFrame *>(sender());
     selected_source=clickedFrame->getSource().toStdString();
 }
+
+void rulesetCreate::editEntry(entry* prev_entry) {
+    char* destination_c = strdup(destination.c_str());
+    char** sources_c = new char*[sources->size()];
+    int count = 1;
+    for(int i =0;i<sources->size();i++){
+        sources_c[i] = strdup(sources->at(i).c_str());
+    }
+    filterPair *filters_c = new filterPair[filters->size()];
+    for(int i=0;i<filters->size();i++){
+        filters_c[i].filter=strdup(filters->at(i).first.c_str());
+        filters_c[i].type=strdup(filters->at(i).second.c_str());
+    }
+    entry* entry_arg;
+    entry_arg->source = sources_c;
+    entry_arg->source_count=sources->size();
+    entry_arg->destination=destination_c;
+    entry_arg->filters=filters_c;
+    entry_arg->filter_count=filters->size();
+    int res = write_entry(entry_arg);
+
+}
+
+
 void rulesetCreate::addEntry() {
     // Convert C++ datatype to C ffs
     /* std::vector<std::pair<std::string,std::string>>* filters;
@@ -194,8 +242,13 @@ void rulesetCreate::addEntry() {
         filters_c[i].filter=strdup(filters->at(i).first.c_str());
         filters_c[i].type=strdup(filters->at(i).second.c_str());
     }
-
-    int res = write_entry(sources_c,sources->size(),destination_c,filters_c,filters->size());
+    entry* entry_arg;
+    entry_arg->source = sources_c;
+    entry_arg->source_count=sources->size();
+    entry_arg->destination=destination_c;
+    entry_arg->filters=filters_c;
+    entry_arg->filter_count=filters->size();
+    int res = write_entry(entry_arg);
     qDebug() << res;
     this->destroy();
 }
