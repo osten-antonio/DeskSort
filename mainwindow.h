@@ -3,6 +3,9 @@
 
 #include <QMainWindow>
 #include "rule_set_container.h"
+extern "C" {
+#include "script.h"
+}
 
 
 

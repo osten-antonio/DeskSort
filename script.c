@@ -69,7 +69,7 @@ int process(folderPair destination_data,const char* filter,const char* filter_ty
     return 1;
 }
 
-int *get_destination_id() {
+int *get_destination_ids() {
     if(connect_db()==0){
         return 0;
     }
@@ -333,6 +333,130 @@ char **get_destination() {
     return res;
 }
 
+int get_destination_id(char* destination_folder){
+    sqlite3_stmt *stmt;
+    if(sqlite3_prepare_v2(db,"SELECT destination_id FROM destination WHERE folder_path =(?)",-1,&stmt,NULL)!=SQLITE_OK){
+        return -1;
+    }
+    if(sqlite3_bind_text(stmt,1,destination_folder,-1,SQLITE_TRANSIENT)!=SQLITE_OK){
+        return -1;
+    }
+    if(sqlite3_step(stmt)!=SQLITE_ROW){
+        return -1;
+    }
+    int destination_id = sqlite3_column_int(stmt,0);
+    sqlite3_finalize(stmt);
+    return destination_id;
+}
+
+const char** get_sources(char* destination_folder){
+    sqlite3_stmt *stmt;
+    int destination_id = get_destination_id(destination_folder);
+    if(destination_id<1){
+        return NULL;
+    }
+    if(sqlite3_prepare_v2(db,"SELECT count(*) FROM source INNER JOIN "
+                               "link ON source.folder_id = link.source_folder_id WHERE "
+                               "link.destination_folder_id = (?)",-1,&stmt,NULL)!=SQLITE_OK){
+        return NULL;
+    }
+    if(sqlite3_bind_int(stmt,1,destination_id)!=SQLITE_OK){
+        return NULL;
+    }
+    if(sqlite3_step(stmt)!=SQLITE_ROW){
+        return NULL;
+    }
+    int folder_count = sqlite3_column_int(stmt,0);
+    sqlite3_finalize(stmt);
+    stmt = NULL;
+
+    const char** res = (const char**)malloc(folder_count*sizeof(char*));
+
+    if(sqlite3_prepare_v2(db,"SELECT source.folder_path FROM source INNER JOIN "
+                               "link ON source.folder_id = link.source_folder_id WHERE "
+                               "link.destination_folder_id = (?)",-1,&stmt,NULL)!=SQLITE_OK){
+        free(res);
+        return NULL;
+    }
+    if(sqlite3_bind_int(stmt,1,destination_id)!=SQLITE_OK){
+        free(res);
+        sqlite3_finalize(stmt);
+        return NULL;
+    }
+    if(sqlite3_step(stmt)!=SQLITE_ROW){
+        free(res);
+        sqlite3_finalize(stmt);
+        return NULL;
+    }
+    int i=0;
+    while(sqlite3_step(stmt)==SQLITE_ROW){
+        const char* cur = (const char*)sqlite3_column_text(stmt,0);
+        if(cur==NULL){
+            continue;
+        }
+        else res[i] = cur;
+        i++;
+    }
+    sqlite3_finalize(stmt);
+    return res;
+}
+
+const filterPair* get_filters(char* destination_folder){
+    sqlite3_stmt *stmt;
+    int destination_id = get_destination_id(destination_folder);
+    if(destination_id<1){
+        return NULL;
+    }
+    if(sqlite3_prepare_v2(db,"SELECT count(*) FROM filters INNER JOIN "
+                               "link ON filters.filter_id = link.filter_id WHERE "
+                               "link.destination_folder_id = (?)",-1,&stmt,NULL)!=SQLITE_OK){
+        return NULL;
+    }
+    if(sqlite3_bind_int(stmt,1,destination_id)!=SQLITE_OK){
+        return NULL;
+    }
+    if(sqlite3_step(stmt)!=SQLITE_ROW){
+        return NULL;
+    }
+    int filters_count=sqlite3_column_int(stmt,0);
+    sqlite3_finalize(stmt);
+    stmt=NULL;
+
+
+    filterPair* res = (filterPair*)malloc(filters_count*sizeof(filterPair));
+
+    if(sqlite3_prepare_v2(db,"SELECT filters.filter,filters.type FROM filters INNER JOIN "
+                               "link ON filters.filter_id = link.filter_id WHERE "
+                               "link.destination_folder_id = (?)",-1,&stmt,NULL)!=SQLITE_OK){
+        free(res);
+        return NULL;
+    }
+    if(sqlite3_bind_int(stmt,1,destination_id)!=SQLITE_OK){
+        sqlite3_finalize(stmt);
+        free(res);
+        return NULL;
+    }
+    if(sqlite3_step(stmt)!=SQLITE_ROW){
+        sqlite3_finalize(stmt);
+        free(res);
+        return NULL;
+    }
+    int i = 0;
+    while(sqlite3_step(stmt)==SQLITE_ROW){
+        filterPair res_part;
+        char *filter=(char*)sqlite3_column_text(stmt,0);
+        char *type=(char*)sqlite3_column_text(stmt,0);
+        if(filter==NULL){
+            continue;
+        }
+        res_part.filter = filter;
+        res_part.type=type;
+        res[i]=res_part;
+        i++;
+    }
+    sqlite3_finalize(stmt);
+    return res;
+}
 
 int destination(int id, char *path){
     if(connect_db()==0){

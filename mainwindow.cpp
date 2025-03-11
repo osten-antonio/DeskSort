@@ -22,6 +22,9 @@ MainWindow::MainWindow(QWidget *parent)
     for (int i = 0; i < 10; ++i) {
         rule_set_container *customWidget = new rule_set_container(this);  // Create your custom widget
         // std::string temp = ;
+        char** destinations = get_destination();
+
+
         customWidget->setDestination(std::to_string(i));
         customWidget->setSources(sample_sources);
         customWidget->setFixedSize(771, 191);  // Set a fixed size for each widget

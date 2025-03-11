@@ -3,3 +3,5 @@ build/
 script.exe
 sqlite3.h
 sqlite3.c
+entries.db-shm
+entries.db-wal

@@ -8,7 +8,7 @@
 #include "clickableframe.h"
 #include <QTextEdit>
 extern "C" {
-#include "script.h" // Include the C header for write_entry
+#include "script.h" // write_entry and update_entry
 }
 
 namespace Ui {
