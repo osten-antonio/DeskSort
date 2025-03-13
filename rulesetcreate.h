@@ -22,7 +22,7 @@ class rulesetCreate : public QMainWindow
 public:
 
     explicit rulesetCreate(QWidget *parent = nullptr); // const id smthsmth
-    explicit rulesetCreate(std::vector<std::pair<std::string,std::string>> *filters,std::vector<std::string> *sources
+    explicit rulesetCreate(std::vector<filterPair> *filters,std::vector<std::string> *sources
                            , std::string destination, QWidget *parent = nullptr);
     ~rulesetCreate();
     void setSelectedType(QString type);
@@ -39,7 +39,7 @@ private:
     QVBoxLayout *filtersLayout;
     QVBoxLayout *sourcesLayout;
     // std::unordered_map<std::string,std::string>* filters;
-    std::vector<std::pair<std::string,std::string>>* filters;
+    std::vector<filterPair>* filters;
     std::vector<std::pair<QTextEdit*,QTextEdit*>>* filters_labels;
     std::vector<ClickableFrame*>* createdframe;
     std::vector<ClickableFrame*>* sourceframe;

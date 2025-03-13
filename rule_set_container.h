@@ -8,6 +8,10 @@
 #include <QScrollArea>
 #include <QLineEdit>
 #include <QVBoxLayout>
+extern "C"{
+#include "script.h"
+}
+
 
 class rule_set_container : public QWidget
 {
@@ -21,7 +25,7 @@ public:
 
     void setDestination(std::string destination);
     void setSources(std::vector<std::string> *sources);
-    void setFilters(std::vector<std::pair<std::string,std::string>> *filters);
+    void setFilters(std::vector<filterPair> *filters);
 
 private:
     QBoxLayout *container;
@@ -33,7 +37,7 @@ private:
     QVBoxLayout *filters_layout;
     std::string destination;
     std::vector<std::string> *sources;
-    std::vector<std::pair<std::string,std::string>> *filters;
+    std::vector<filterPair> *filters;
 
 
 signals:

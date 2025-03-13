@@ -20,6 +20,7 @@ typedef struct {
 typedef struct{
     char* filter;
     char* type;
+
 } filterPair;
 
 typedef struct {
@@ -42,7 +43,9 @@ int connect_db();
 int* get_destination_ids();
 int write_entry(entry* entry_arg);
 int update_entry(entry* entry_arg, entry* prev_entry);
-char** get_destination();
+char** get_destination(int* arr_size);
+filterPair *get_filters(char* destination_folder, int* size);
+char** get_sources(char* destination_folder, int* size);
 int destination(int id, char *path);
 int main_script();
 void test();

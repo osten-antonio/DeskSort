@@ -14,7 +14,7 @@
 rulesetCreate::rulesetCreate(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::rulesetCreate)
-    , filters(new std::vector<std::pair<std::string,std::string>>), filters_labels(new std::vector<std::pair<QTextEdit*,QTextEdit*>>)
+    , filters(new std::vector<filterPair>), filters_labels(new std::vector<std::pair<QTextEdit*,QTextEdit*>>)
     , createdframe(new std::vector<ClickableFrame*>), sources(new std::vector<std::string>), source_labels(new std::vector<QTextEdit*>)
     , sourceframe(new std::vector<ClickableFrame*>)
 
@@ -48,16 +48,17 @@ rulesetCreate::rulesetCreate(QWidget *parent)
 }
 
 // update
-rulesetCreate::rulesetCreate(std::vector<std::pair<std::string,std::string>> *filters_args,std::vector<std::string> *sources_args
+rulesetCreate::rulesetCreate(std::vector<filterPair> *filters_args,std::vector<std::string> *sources_args
                              , std::string destination, QWidget *parent)    : QMainWindow(parent)
     , ui(new Ui::rulesetCreate)
-    , filters(new std::vector<std::pair<std::string,std::string>>), filters_labels(new std::vector<std::pair<QTextEdit*,QTextEdit*>>)
+    , filters(new std::vector<filterPair>), filters_labels(new std::vector<std::pair<QTextEdit*,QTextEdit*>>)
     , createdframe(new std::vector<ClickableFrame*>), sources(new std::vector<std::string>), source_labels(new std::vector<QTextEdit*>)
     , sourceframe(new std::vector<ClickableFrame*>){
 
-
+    qDebug() << "prev Destination: " << QString::fromStdString(destination);
     // convert to c
     char* prev_destination_c = strdup(destination.c_str());
+    qDebug() << "Destination: " << prev_destination_c;
     char** prev_sources_c = new char*[sources_args->size()];
     int count = 1;
     for(int i =0;i<sources_args->size();i++){
@@ -65,10 +66,10 @@ rulesetCreate::rulesetCreate(std::vector<std::pair<std::string,std::string>> *fi
     }
     filterPair *prev_filters_c = new filterPair[filters_args->size()];
     for(int i=0;i<filters_args->size();i++){
-        prev_filters_c[i].filter=strdup(filters_args->at(i).first.c_str());
-        prev_filters_c[i].type=strdup(filters_args->at(i).second.c_str());
+        prev_filters_c[i].filter=strdup(filters_args->at(i).filter);
+        prev_filters_c[i].type=strdup(filters_args->at(i).type);
     }
-    entry* prev_entry_arg;
+    entry* prev_entry_arg = new entry;
     prev_entry_arg->source = prev_sources_c;
     prev_entry_arg->source_count=sources_args->size();
     prev_entry_arg->destination=prev_destination_c;
@@ -91,7 +92,7 @@ rulesetCreate::rulesetCreate(std::vector<std::pair<std::string,std::string>> *fi
     ui->sourceArea->setWidget(sourcesWidget);
     ui->sourceArea->setWidgetResizable(true);
 
-    for(std::pair<std::string,std::string> filter_pair:*filters_args){ // test this later pls
+    for(filterPair filter_pair:*filters_args){
         ClickableFrame *container = new ClickableFrame();
         container->setFixedSize(540,30);
 
@@ -100,23 +101,23 @@ rulesetCreate::rulesetCreate(std::vector<std::pair<std::string,std::string>> *fi
         containerLayout->setContentsMargins(0,0,0,0);
         QTextEdit *type = new QTextEdit();
         QTextEdit *filter = new QTextEdit();
-        filter->setText(QString::fromStdString(filter_pair.first));
+        filter->setText(QString::fromStdString(filter_pair.filter));
         filter->setEnabled(false);
         filter->setFixedSize(382,30);
         filter->setAttribute(Qt::WA_TransparentForMouseEvents);
         containerLayout->addWidget(filter);
 
-        type->setText(QString::fromStdString(filter_pair.second));
+        type->setText(QString::fromStdString(filter_pair.type));
         type->setFixedSize(160,30);
         type->setEnabled(false);
         type->setAttribute(Qt::WA_TransparentForMouseEvents);
-        container->setFilter(QString::fromStdString(filter_pair.first));
-        container->setType(QString::fromStdString(filter_pair.second));
+        container->setFilter(QString::fromStdString(filter_pair.filter));
+        container->setType(QString::fromStdString(filter_pair.type));
         connect(container,&ClickableFrame::clicked,this,&rulesetCreate::selectFilter);
         containerLayout->addWidget(type);
 
         filtersLayout->addWidget(container);
-        addFilter(QString::fromStdString(filter_pair.first),QString::fromStdString(filter_pair.second));
+        addFilter(QString::fromStdString(filter_pair.filter),QString::fromStdString(filter_pair.type));
         createdframe->push_back(container);
         filters_labels->push_back(std::make_pair(filter,type));
     }
@@ -139,6 +140,7 @@ rulesetCreate::rulesetCreate(std::vector<std::pair<std::string,std::string>> *fi
         source_labels->push_back(source_label);
         sourcesLayout->addWidget(container);
     }
+
     ui->pushButton->setText("Edit");
     connect(ui->add_filter,&QPushButton::clicked,this,&rulesetCreate::addFilters);
     connect(ui->edit_filter,&QPushButton::clicked,this,&rulesetCreate::editFilter);
@@ -148,6 +150,7 @@ rulesetCreate::rulesetCreate(std::vector<std::pair<std::string,std::string>> *fi
     connect(ui->edit_source,&QPushButton::clicked,this,&rulesetCreate::editSource);
     connect(ui->delete_source,&QPushButton::clicked,this,&rulesetCreate::deleteSource);
     connect(ui->pushButton,&QPushButton::clicked,this,[this,prev_entry_arg](){
+
         editEntry(prev_entry_arg);
     });
 }
@@ -201,7 +204,7 @@ void rulesetCreate::selectSource(){
 }
 
 void rulesetCreate::editEntry(entry* prev_entry) {
-    char* destination_c = strdup(destination.c_str());
+    char* destination_c = strdup(ui->destinationLabel->text().toStdString().c_str());
     char** sources_c = new char*[sources->size()];
     int count = 1;
     for(int i =0;i<sources->size();i++){
@@ -209,17 +212,18 @@ void rulesetCreate::editEntry(entry* prev_entry) {
     }
     filterPair *filters_c = new filterPair[filters->size()];
     for(int i=0;i<filters->size();i++){
-        filters_c[i].filter=strdup(filters->at(i).first.c_str());
-        filters_c[i].type=strdup(filters->at(i).second.c_str());
+        filters_c[i].filter=strdup(filters->at(i).filter);
+        filters_c[i].type=strdup(filters->at(i).type);
     }
-    entry* entry_arg;
+    entry* entry_arg = new entry;
     entry_arg->source = sources_c;
     entry_arg->source_count=sources->size();
     entry_arg->destination=destination_c;
     entry_arg->filters=filters_c;
     entry_arg->filter_count=filters->size();
-    int res = write_entry(entry_arg);
-
+    qDebug() << "updated Destination: " << QString::fromStdString(destination);
+    int res = update_entry(entry_arg,prev_entry);
+    qDebug() << res;
 }
 
 
@@ -239,10 +243,10 @@ void rulesetCreate::addEntry() {
     }
     filterPair *filters_c = new filterPair[filters->size()];
     for(int i=0;i<filters->size();i++){
-        filters_c[i].filter=strdup(filters->at(i).first.c_str());
-        filters_c[i].type=strdup(filters->at(i).second.c_str());
+        filters_c[i].filter=strdup(filters->at(i).filter);
+        filters_c[i].type=strdup(filters->at(i).type);
     }
-    entry* entry_arg;
+    entry* entry_arg = new entry;
     entry_arg->source = sources_c;
     entry_arg->source_count=sources->size();
     entry_arg->destination=destination_c;
@@ -257,18 +261,27 @@ void rulesetCreate::addEntry() {
 
 
 void rulesetCreate::editFilter(){
-    auto search_pointer = std::find(filters->begin(), filters->end(), std::make_pair(selected_filter.toStdString(), selected_type.toStdString()));
-    if (search_pointer != filters->end()) {
+    int i;
+    for(i =0; i < filters->size();i++){
+        if (strcmp((*filters)[i].filter, selected_filter.toStdString().c_str()) == 0 &&
+            strcmp((*filters)[i].type, selected_type.toStdString().c_str()) == 0) {
+            break;
+        }
+    }
+    if (i<filters->size()) {
         editfilterscreen *screen = new editfilterscreen(this, selected_filter, selected_type);
         screen->exec();
-        int index = std::distance(filters->begin(), search_pointer);
-        if (index < filters->size()) {
-            (*filters)[index] = std::make_pair(screen->getFilter().toStdString(), screen->getType().toStdString());
-            (*filters_labels)[index].first->setText(screen->getFilter());
-            (*filters_labels)[index].second->setText(screen->getType());
-            (*createdframe)[index]->setFilter(screen->getFilter());
-            (*createdframe)[index]->setType(screen->getType());
-        }
+        free((*filters)[i].filter);
+        free((*filters)[i].type);
+        filterPair filter;
+        filter.filter = strdup(screen->getFilter().toStdString().c_str());
+        filter.type = strdup(screen->getType().toStdString().c_str());
+        (*filters)[i] = filter;
+        (*filters_labels)[i].first->setText(screen->getFilter());
+        (*filters_labels)[i].second->setText(screen->getType());
+        (*createdframe)[i]->setFilter(screen->getFilter());
+        (*createdframe)[i]->setType(screen->getType());
+
     }
 }
 
@@ -293,8 +306,11 @@ void rulesetCreate::selectDestination(){
                                                     "/home",
                                                     QFileDialog::ShowDirsOnly
                                                         | QFileDialog::DontResolveSymlinks);
-    ui->destinationLabel->setText(dir);
-    destination = dir.toStdString();
+    if(!dir.isEmpty()){
+        ui->destinationLabel->setText(dir);
+        destination = dir.toStdString();
+    }
+
 }
 
 void rulesetCreate::deleteSource(){
@@ -315,18 +331,25 @@ void rulesetCreate::deleteSource(){
 }
 
 void rulesetCreate::deleteFilter(){
-    auto search_pointer = std::find(filters->begin(), filters->end(), std::make_pair(selected_filter.toStdString(), selected_type.toStdString()));
-    if (search_pointer != filters->end()) {
+    int i;
+    for(i =0; i < filters->size();i++){
+        if (strcmp((*filters)[i].filter, selected_filter.toStdString().c_str()) == 0 &&
+            strcmp((*filters)[i].type, selected_type.toStdString().c_str()) == 0) {
+            break;
+        }
+    }
+
+    if (i < filters->size()) {
         QMessageBox::StandardButton confirm = QMessageBox::question(this, "Confirmation", "Are you sure you want to delete?",
                                       QMessageBox::Yes|QMessageBox::No);
         if(confirm == QMessageBox::Yes){
-            int index = std::distance(filters->begin(), search_pointer);
-            if (index < filters->size()) {
-                (*createdframe)[index]->deleteLater();
-                (*filters).erase((*filters).begin() + index);
-                (*filters_labels).erase((*filters_labels).begin()+index);
-                (*createdframe).erase((*createdframe).begin()+index);
-            }
+
+
+            (*createdframe)[i]->deleteLater();
+            (*filters).erase((*filters).begin() + i);
+            (*filters_labels).erase((*filters_labels).begin()+i);
+            (*createdframe).erase((*createdframe).begin()+i);
+
         }
     }
 }
@@ -353,7 +376,10 @@ QString rulesetCreate::getSelectedType(){
 }
 
 void rulesetCreate::addFilter(QString filter, QString type){
-    filters->push_back(std::make_pair(filter.toStdString(),type.toStdString()));
+    filterPair temp;
+    temp.filter = strdup(filter.toStdString().c_str());
+    temp.type = strdup(type.toStdString().c_str());
+    filters->push_back(temp);
 }
 
 void rulesetCreate::selectFilter(){
