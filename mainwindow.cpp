@@ -95,3 +95,5 @@ void MainWindow::openCreateWindow() {
     createWindow->setFocus();
     qDebug() << "in";
 }
+
+// Create refresh mainwindow function

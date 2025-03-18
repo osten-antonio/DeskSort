@@ -9,6 +9,7 @@
 #include <dirent.h>
 #include <string.h>
 #include <windows.h>
+#include <stdbool.h>
 
 
 
@@ -41,7 +42,7 @@ extern "C" {
 
 int connect_db();
 int* get_destination_ids();
-int write_entry(entry* entry_arg);
+int write_entry(entry* entry_arg, bool from_update);
 int update_entry(entry* entry_arg, entry* prev_entry);
 char** get_destination(int* arr_size);
 filterPair *get_filters(char* destination_folder, int* size);

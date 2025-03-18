@@ -114,7 +114,8 @@ int *get_destination_ids() {
     return res;
 }
 
-int write_entry(entry* entry_arg) {
+int write_entry(entry* entry_arg, bool from_update) {
+
     if(entry_arg->filter_count < 1){
         return -30;
     }
@@ -125,11 +126,13 @@ int write_entry(entry* entry_arg) {
         return -50;
     }
 
-    int connect = connect_db();
-    if(connect!=0){
-        return -100;
+    if(!from_update){
+        sqlite3_exec(db,"BEGIN TRANSACTION;",NULL,NULL,NULL);
+        int connect = connect_db();
+        if(connect!=0){
+            return -100;
+        }
     }
-
     int* source_ids = (int*)malloc(entry_arg->source_count * sizeof(int));
     int* filter_ids = (int*)malloc(entry_arg->filter_count * sizeof(int));
 
@@ -257,12 +260,20 @@ int write_entry(entry* entry_arg) {
 cleanup:
     free(source_ids);
     free(filter_ids);
+    if(error_id==0){
+        sqlite3_exec(db, "END TRANSACTION;", NULL, NULL, NULL);
+    }else{
+        sqlite3_exec(db, "ROLLBACK TRANSACTION;", NULL, NULL, NULL);
+        sqlite3_exec(db, "END TRANSACTION;", NULL, NULL, NULL);
+    }
+
     return error_id;
 }
 
 
 
 int update_entry(entry* entry_arg, entry* prev_entry){
+    sqlite3_exec(db,"BEGIN TRANSACTION;",NULL,NULL,NULL);
     if(entry_arg->filter_count < 1){
         return -30;
     }
@@ -340,7 +351,7 @@ int update_entry(entry* entry_arg, entry* prev_entry){
         }
         sqlite3_finalize(stmt);
     }
-    return write_entry(entry_arg);
+    return write_entry(entry_arg,true);
 }
 
 

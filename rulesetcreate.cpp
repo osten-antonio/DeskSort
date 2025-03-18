@@ -283,7 +283,7 @@ void rulesetCreate::addEntry() {
     entry_arg->destination=destination_c;
     entry_arg->filters=filters_c;
     entry_arg->filter_count=filters->size();
-    int res = write_entry(entry_arg);
+    int res = write_entry(entry_arg,false);
     QMessageBox msgBox;
     switch(res){
         case -30:
