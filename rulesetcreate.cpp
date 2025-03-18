@@ -169,6 +169,13 @@ void rulesetCreate::addFilters(){
     filtercreate *filt_create_screen = new filtercreate(this);
     filt_create_screen->exec();
     qDebug() << "aaa";
+    for(int i = 0;i<filters_labels->size();i++){
+        if(filters_labels->at(i) == filt_create_screen->get_labels()){ // fix here
+            QMessageBox msgBox;
+            msgBox.critical(0,"Error","Duplicate filter");
+            break;
+        }
+    }
     filters_labels->push_back(filt_create_screen->get_labels());
     createdframe->push_back(filt_create_screen->getFrame());
 }
@@ -179,22 +186,27 @@ void rulesetCreate::addSource(){
                                                     QFileDialog::ShowDirsOnly
                                                         | QFileDialog::DontResolveSymlinks);
     auto search_pointer = std::find(sources->begin(), sources->end(), dir.toStdString());
-    if(search_pointer == sources->end()){
-        sources->push_back(dir.toStdString());
-        ClickableFrame* container = new ClickableFrame(this);
-        container->setFixedSize(540,30);
+    if(dir.toStdString()==destination){
+        QMessageBox msgBox;
+        msgBox.critical(0,"Error","Source and destination is the same");
+    }else{
+        if(search_pointer == sources->end()){
+            sources->push_back(dir.toStdString());
+            ClickableFrame* container = new ClickableFrame(this);
+            container->setFixedSize(540,30);
 
-        QTextEdit* source_label = new QTextEdit(container);
-        source_label->setFixedSize(540,30);
-        source_label->setText(dir);
-        source_label->setEnabled(false);
-        source_label->setAttribute(Qt::WA_TransparentForMouseEvents);
-        std::string source_text = source_label->toPlainText().toStdString();
-        container->setSource(dir);
-        connect(container,&ClickableFrame::clicked,this,&rulesetCreate::selectSource);
-        sourceframe->push_back(container);
-        source_labels->push_back(source_label);
-        sourcesLayout->addWidget(container);
+            QTextEdit* source_label = new QTextEdit(container);
+            source_label->setFixedSize(540,30);
+            source_label->setText(dir);
+            source_label->setEnabled(false);
+            source_label->setAttribute(Qt::WA_TransparentForMouseEvents);
+            std::string source_text = source_label->toPlainText().toStdString();
+            container->setSource(dir);
+            connect(container,&ClickableFrame::clicked,this,&rulesetCreate::selectSource);
+            sourceframe->push_back(container);
+            source_labels->push_back(source_label);
+            sourcesLayout->addWidget(container);
+        }
     }
 }
 
@@ -223,6 +235,25 @@ void rulesetCreate::editEntry(entry* prev_entry) {
     entry_arg->filter_count=filters->size();
     qDebug() << "updated Destination: " << QString::fromStdString(destination);
     int res = update_entry(entry_arg,prev_entry);
+    QMessageBox msgBox;
+    switch(res){
+        case -30:
+            msgBox.critical(0,"Error","Filter is empty");
+            break;
+        case -40:
+            msgBox.critical(0,"Error","Source is empty");
+            break;
+        case -50:
+            msgBox.critical(0,"Error","Destination is empty");
+            break;
+        case 0:
+            this->destroy();
+            break;
+        default:
+           msgBox.critical(0,"Error","Database error");
+           break;
+    }
+
     qDebug() << res;
 }
 
@@ -253,8 +284,24 @@ void rulesetCreate::addEntry() {
     entry_arg->filters=filters_c;
     entry_arg->filter_count=filters->size();
     int res = write_entry(entry_arg);
-    qDebug() << res;
-    this->destroy();
+    QMessageBox msgBox;
+    switch(res){
+        case -30:
+            msgBox.critical(0,"Error","Filter is empty");
+            break;
+        case -40:
+            msgBox.critical(0,"Error","Source is empty");
+            break;
+        case -50:
+            msgBox.critical(0,"Error","Destination is empty");
+            break;
+        case 0:
+            this->destroy();
+            break;
+        default:
+            msgBox.critical(0,"Error","Database error");
+            break;
+    }
 }
 
 
@@ -306,11 +353,16 @@ void rulesetCreate::selectDestination(){
                                                     "/home",
                                                     QFileDialog::ShowDirsOnly
                                                         | QFileDialog::DontResolveSymlinks);
-    if(!dir.isEmpty()){
-        ui->destinationLabel->setText(dir);
-        destination = dir.toStdString();
+    auto search_pointer = std::find(sources->begin(), sources->end(), dir.toStdString());
+    if(search_pointer != sources->end()){
+        QMessageBox msgBox;
+        msgBox.critical(0,"Error","Destination and source is the same");
+    }else{
+        if(!dir.isEmpty()){
+            ui->destinationLabel->setText(dir);
+            destination = dir.toStdString();
+        }
     }
-
 }
 
 void rulesetCreate::deleteSource(){

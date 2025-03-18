@@ -5,7 +5,7 @@
 #include <QFrame>
 #include <QTextEdit>
 #include "clickableframe.h"
-
+#include <QMessageBox>
 
 filtercreate::filtercreate(rulesetCreate *create_screen,QWidget *parent)
     : QDialog(parent)
@@ -30,42 +30,49 @@ ClickableFrame* filtercreate::getFrame(){
 }
 
 void filtercreate::addFilter(){
-    // validation and add to database
-    qDebug() << ui->lineEdit->text();
-    qDebug() << ui->comboBox->currentText();
+    if(ui->lineEdit->text().size() < 1){
+        QMessageBox msgBox;
+        msgBox.critical(0,"Error","Filter is empty");
+    }
+    else{
+        // validation and add to database
+        qDebug() << ui->lineEdit->text();
+        qDebug() << ui->comboBox->currentText();
 
-    create_screen->setEnabled(true);
+        create_screen->setEnabled(true);
 
-    QVBoxLayout *filtersLayout = create_screen->getFiltersLayout();
+        QVBoxLayout *filtersLayout = create_screen->getFiltersLayout();
 
-    // Set mouse event for selecting specific entries, create class variable
-    ClickableFrame *container = new ClickableFrame();
-    container->setFixedSize(540,30);
-    // connect(container,&QWidget::mousePressEvent,)
+        // Set mouse event for selecting specific entries, create class variable
+        ClickableFrame *container = new ClickableFrame();
+        container->setFixedSize(540,30);
+        // connect(container,&QWidget::mousePressEvent,)
 
-    QHBoxLayout *containerLayout = new QHBoxLayout(container);
-    containerLayout->setSpacing(0);
-    containerLayout->setContentsMargins(0,0,0,0);
+        QHBoxLayout *containerLayout = new QHBoxLayout(container);
+        containerLayout->setSpacing(0);
+        containerLayout->setContentsMargins(0,0,0,0);
 
-    filter->setText(ui->lineEdit->text());
-    filter->setEnabled(false);
-    filter->setFixedSize(382,30);
-    filter->setAttribute(Qt::WA_TransparentForMouseEvents);
-    containerLayout->addWidget(filter);
+        filter->setText(ui->lineEdit->text());
+        filter->setEnabled(false);
+        filter->setFixedSize(382,30);
+        filter->setAttribute(Qt::WA_TransparentForMouseEvents);
+        containerLayout->addWidget(filter);
 
-    type->setText(ui->comboBox->currentText());
-    type->setFixedSize(160,30);
-    type->setEnabled(false);
-    type->setAttribute(Qt::WA_TransparentForMouseEvents);
-    container->setFilter(ui->lineEdit->text());
-    container->setType(ui->comboBox->currentText());
-    connect(container,&ClickableFrame::clicked,this,&filtercreate::selectFilter);
-    containerLayout->addWidget(type);
+        type->setText(ui->comboBox->currentText());
+        type->setFixedSize(160,30);
+        type->setEnabled(false);
+        type->setAttribute(Qt::WA_TransparentForMouseEvents);
+        container->setFilter(ui->lineEdit->text());
+        container->setType(ui->comboBox->currentText());
+        connect(container,&ClickableFrame::clicked,this,&filtercreate::selectFilter);
+        containerLayout->addWidget(type);
 
-    filtersLayout->addWidget(container);
-    create_screen->addFilter(ui->lineEdit->text(),ui->comboBox->currentText());
-    created_container=container;
-    this->accept();
+        filtersLayout->addWidget(container);
+        create_screen->addFilter(ui->lineEdit->text(),ui->comboBox->currentText());
+        created_container=container;
+
+        this->accept();
+    }
 }
 
 void filtercreate::selectFilter(){

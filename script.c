@@ -115,6 +115,16 @@ int *get_destination_ids() {
 }
 
 int write_entry(entry* entry_arg) {
+    if(entry_arg->filter_count < 1){
+        return -30;
+    }
+    if(entry_arg->source_count < 1){
+        return -40;
+    }
+    if(entry_arg->destination==NULL || strcmp(entry_arg->destination,"")==0){
+        return -50;
+    }
+
     int connect = connect_db();
     if(connect!=0){
         return -100;
@@ -253,7 +263,15 @@ cleanup:
 
 
 int update_entry(entry* entry_arg, entry* prev_entry){
-
+    if(entry_arg->filter_count < 1){
+        return -30;
+    }
+    if(entry_arg->source_count < 1){
+        return -40;
+    }
+    if(entry_arg->destination==NULL || strcmp(entry_arg->destination,"")==0){
+        return -50;
+    }
     sqlite3_stmt* stmt;
     if(sqlite3_prepare_v2(db,"UPDATE destination SET folder_path=(?) WHERE folder_path=(?) RETURNING folder_id",-1,&stmt,NULL)!=SQLITE_OK){
         sqlite3_finalize(stmt);
