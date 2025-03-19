@@ -55,10 +55,8 @@ rulesetCreate::rulesetCreate(std::vector<filterPair> *filters_args,std::vector<s
     , createdframe(new std::vector<ClickableFrame*>), sources(new std::vector<std::string>), source_labels(new std::vector<QTextEdit*>)
     , sourceframe(new std::vector<ClickableFrame*>){
 
-    qDebug() << "prev Destination: " << QString::fromStdString(destination);
     // convert to c
     char* prev_destination_c = strdup(destination.c_str());
-    qDebug() << "Destination: " << prev_destination_c;
     char** prev_sources_c = new char*[sources_args->size()];
     int count = 1;
     for(int i =0;i<sources_args->size();i++){
@@ -126,7 +124,6 @@ rulesetCreate::rulesetCreate(std::vector<filterPair> *filters_args,std::vector<s
     }
 
     for(std::string source:*sources_args){
-        qDebug() << source;
         sources->push_back(source);
         ClickableFrame* container = new ClickableFrame(this);
         container->setFixedSize(540,30);
@@ -154,13 +151,14 @@ rulesetCreate::rulesetCreate(std::vector<filterPair> *filters_args,std::vector<s
     connect(ui->delete_source,&QPushButton::clicked,this,&rulesetCreate::deleteSource);
     connect(ui->pushButton,&QPushButton::clicked,this,[this,prev_entry_arg](){
         editEntry(prev_entry_arg);
+        this->deleteLater();
     });
     connect(delete_button,&QPushButton::clicked,this,[this,prev_entry_arg](){\
         QMessageBox::StandardButton confirm = QMessageBox::question(this, "Confirmation", "Are you sure you want to delete?",
                                     QMessageBox::Yes|QMessageBox::No);
         if(confirm == QMessageBox::Yes){
             int res = delete_entry(prev_entry_arg);
-            qDebug() << res;
+            this->deleteLater();
         }
     });
 }
@@ -178,7 +176,6 @@ void rulesetCreate::addFilters(){
     // qDebug() << ui->sourceArea->focusWidget()->property("source");
     filtercreate *filt_create_screen = new filtercreate(this);
     filt_create_screen->exec();
-    qDebug() << "aaa";
     for(int i = 0;i<filters_labels->size();i++){
         if(filters_labels->at(i) == filt_create_screen->get_labels()){ // fix here
             QMessageBox msgBox;
@@ -195,27 +192,30 @@ void rulesetCreate::addSource(){
                                                     "/home",
                                                     QFileDialog::ShowDirsOnly
                                                         | QFileDialog::DontResolveSymlinks);
-    auto search_pointer = std::find(sources->begin(), sources->end(), dir.toStdString());
-    if(dir.toStdString()==destination){
-        QMessageBox msgBox;
-        msgBox.critical(0,"Error","Source and destination is the same");
-    }else{
-        if(search_pointer == sources->end()){
-            sources->push_back(dir.toStdString());
-            ClickableFrame* container = new ClickableFrame(this);
-            container->setFixedSize(540,30);
 
-            QTextEdit* source_label = new QTextEdit(container);
-            source_label->setFixedSize(540,30);
-            source_label->setText(dir);
-            source_label->setEnabled(false);
-            source_label->setAttribute(Qt::WA_TransparentForMouseEvents);
-            std::string source_text = source_label->toPlainText().toStdString();
-            container->setSource(dir);
-            connect(container,&ClickableFrame::clicked,this,&rulesetCreate::selectSource);
-            sourceframe->push_back(container);
-            source_labels->push_back(source_label);
-            sourcesLayout->addWidget(container);
+    if(!dir.isEmpty()){
+        auto search_pointer = std::find(sources->begin(), sources->end(), dir.toStdString());
+        if(dir.toStdString()==destination){
+            QMessageBox msgBox;
+            msgBox.critical(0,"Error","Source and destination is the same");
+        }else{
+            if(search_pointer == sources->end()){
+                sources->push_back(dir.toStdString());
+                ClickableFrame* container = new ClickableFrame(this);
+                container->setFixedSize(540,30);
+
+                QTextEdit* source_label = new QTextEdit(container);
+                source_label->setFixedSize(540,30);
+                source_label->setText(dir);
+                source_label->setEnabled(false);
+                source_label->setAttribute(Qt::WA_TransparentForMouseEvents);
+                std::string source_text = source_label->toPlainText().toStdString();
+                container->setSource(dir);
+                connect(container,&ClickableFrame::clicked,this,&rulesetCreate::selectSource);
+                sourceframe->push_back(container);
+                source_labels->push_back(source_label);
+                sourcesLayout->addWidget(container);
+            }
         }
     }
 }
@@ -243,7 +243,6 @@ void rulesetCreate::editEntry(entry* prev_entry) {
     entry_arg->destination=destination_c;
     entry_arg->filters=filters_c;
     entry_arg->filter_count=filters->size();
-    qDebug() << "updated Destination: " << QString::fromStdString(destination);
     int res = update_entry(entry_arg,prev_entry);
     QMessageBox msgBox;
     switch(res){
@@ -256,6 +255,9 @@ void rulesetCreate::editEntry(entry* prev_entry) {
         case -50:
             msgBox.critical(0,"Error","Destination is empty");
             break;
+        case -200:
+            msgBox.critical(0,"Error","Destination already exist");
+            break;
         case 0:
             this->destroy();
             break;
@@ -264,7 +266,6 @@ void rulesetCreate::editEntry(entry* prev_entry) {
            break;
     }
 
-    qDebug() << res;
 }
 
 
@@ -305,6 +306,9 @@ void rulesetCreate::addEntry() {
         case -50:
             msgBox.critical(0,"Error","Destination is empty");
             break;
+        case -200:
+            msgBox.critical(0,"Error","Destination already exist");
+            break;
         case 0:
             this->destroy();
             break;
@@ -312,6 +316,7 @@ void rulesetCreate::addEntry() {
             msgBox.critical(0,"Error","Database error");
             break;
     }
+    this->deleteLater();
 }
 
 
@@ -343,7 +348,6 @@ void rulesetCreate::editFilter(){
 }
 
 void rulesetCreate::editSource(){
-    qDebug() << selected_source << "gljHGLB";
     auto search_pointer = std::find(sources->begin(), sources->end(), selected_source);
     if (search_pointer != sources->end()) {
         int index = std::distance(sources->begin(),search_pointer);
@@ -448,6 +452,5 @@ void rulesetCreate::selectFilter(){
     ClickableFrame *clickedFrame = qobject_cast<ClickableFrame *>(sender());
     this->setSelectedFilter(clickedFrame->getFilter());
     this->setSelectedType(clickedFrame->getType());
-    qDebug() << "kgmjnoisngmklgn";
 }
 

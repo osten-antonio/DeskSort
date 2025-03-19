@@ -1,9 +1,11 @@
 #include "rule_set_container.h"
 #include <QTextEdit>
 #include "rulesetcreate.h"
+#include "mainwindow.h"
 
-rule_set_container::rule_set_container(QWidget *parent, int top, int left)
+rule_set_container::rule_set_container(MainWindow* parent, int top, int left)
     : QWidget(parent),
+    mainWindow(parent),
     destination_label(new QLineEdit("", this)),
     source_area(new QScrollArea(this)),
     filters_area(new QScrollArea(this)),
@@ -59,10 +61,12 @@ rule_set_container::rule_set_container(QWidget *parent, int top, int left)
     setFixedSize(771, 191);
 
     connect(edit_button,&QPushButton::clicked,this,[this](){
-        qDebug() << "pressed" << filters << sources << destination;
-        qDebug() << "Pressed edit button, destination: " << QString::fromStdString(destination);
-
         rulesetCreate *createWindow  = new rulesetCreate(filters,sources,destination,this);
+
+        connect(createWindow, &QObject::destroyed, this, [this]() {
+            this->setEnabled(true);
+            mainWindow->drawEntries();
+        });
         createWindow->show();
         // createWindow->raise();
         // this->setEnabled(false);
@@ -72,7 +76,6 @@ rule_set_container::rule_set_container(QWidget *parent, int top, int left)
     });
 }
 void rule_set_container::setDestination(std::string destination){
-    qDebug() << destination;
     destination_label->setText(QString::fromStdString(destination));
     this->destination=destination;
 }

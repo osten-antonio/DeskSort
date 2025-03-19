@@ -35,9 +35,6 @@ void filtercreate::addFilter(){
         msgBox.critical(0,"Error","Filter is empty");
     }
     else{
-        // validation and add to database
-        qDebug() << ui->lineEdit->text();
-        qDebug() << ui->comboBox->currentText();
 
         create_screen->setEnabled(true);
 
@@ -79,6 +76,5 @@ void filtercreate::selectFilter(){
     ClickableFrame *clickedFrame = qobject_cast<ClickableFrame *>(sender());
     create_screen->setSelectedFilter(clickedFrame->getFilter());
     create_screen->setSelectedType(clickedFrame->getType());
-    qDebug() << "kgmjnoisngmklgn";
 }
 

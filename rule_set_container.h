@@ -12,12 +12,13 @@ extern "C"{
 #include "script.h"
 }
 
+class MainWindow;
 
 class rule_set_container : public QWidget
 {
     Q_OBJECT
 public:
-    explicit rule_set_container(QWidget *parent = nullptr, int top = 10, int left= 10);
+    explicit rule_set_container(MainWindow* parent, int top = 10, int left= 10);
 
     void addSourceLabel(const QString &labelText);
 
@@ -38,7 +39,7 @@ private:
     std::string destination;
     std::vector<std::string> *sources;
     std::vector<filterPair> *filters;
-
+    MainWindow* mainWindow;
 
 signals:
     // Add functionality later

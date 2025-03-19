@@ -50,7 +50,6 @@ int process(folderPair destination_data,const char* filter,const char* filter_ty
             if(!strncmp(entry->d_name, filter, strlen(filter))){
                 // move
             }
-            printf("%s\n", entry->d_name);
         }
 
 
@@ -119,6 +118,7 @@ int delete_entry(entry* prev_entry){
     if(connect!=0){
         return -100;
     }
+
     sqlite3_exec(db, "PRAGMA foreign_keys = ON;", NULL, NULL, NULL);
     sqlite3_exec(db,"BEGIN TRANSACTION;",NULL,NULL,NULL);
     sqlite3_stmt* stmt;
@@ -250,6 +250,22 @@ int write_entry(entry* entry_arg, bool from_update) { // SEE IF THERE IS TEH SAM
             return -100;
         }
     }
+    sqlite3_stmt* stmt;
+    int destination_id, error_id;
+    if(sqlite3_prepare_v2(db,"SELECT COUNT(*) FROM destination WHERE folder_path = (?)",-1,&stmt,NULL)!=SQLITE_OK){
+        return -10;
+    }
+    if(sqlite3_bind_text(stmt,1,entry_arg->destination,-1,SQLITE_TRANSIENT)!=SQLITE_OK){
+        return -11;
+    }
+    if(sqlite3_step(stmt)!=SQLITE_ROW){
+        return -12;
+    }
+    if(sqlite3_column_int(stmt,0)>0){
+        return -200;
+    }
+    sqlite3_finalize(stmt);
+    stmt=NULL;
     int* source_ids = (int*)malloc(entry_arg->source_count * sizeof(int));
     int* filter_ids = (int*)malloc(entry_arg->filter_count * sizeof(int));
 
@@ -259,8 +275,9 @@ int write_entry(entry* entry_arg, bool from_update) { // SEE IF THERE IS TEH SAM
         return -1;
     }
 
-    sqlite3_stmt* stmt;
-    int destination_id, error_id;
+
+
+
 
     if (sqlite3_prepare_v2(db, "SELECT folder_id FROM destination WHERE folder_path = ?", -1, &stmt, NULL) != SQLITE_OK) {
         error_id = -2;
@@ -319,10 +336,6 @@ int write_entry(entry* entry_arg, bool from_update) { // SEE IF THERE IS TEH SAM
 
     // filters
     for (int i = 0; i < entry_arg->filter_count; i++) {
-        printf("filters[%d] address: %p\n", i, (void*)&entry_arg->filters[i]);
-        printf("filter[%d]: %s\n", i, entry_arg->filters[i].filter ? entry_arg->filters[i].filter : "NULL");
-        printf("type[%d]: %s\n", i, entry_arg->filters[i].type ? entry_arg->filters[i].type : "NULL");
-        fflush(stdout);
 
         if (sqlite3_prepare_v2(db, "INSERT INTO filters(filter, filter_type) VALUES(?, ?)", -1, &stmt, NULL) != SQLITE_OK) {
             error_id = -8;
@@ -339,8 +352,6 @@ int write_entry(entry* entry_arg, bool from_update) { // SEE IF THERE IS TEH SAM
             goto cleanup;
         }
         if (sqlite3_step(stmt) != SQLITE_DONE) {
-            fprintf(stderr, "SQLite Execution Error (-11): %s\n", sqlite3_errmsg(db));
-            fflush(stderr);
             error_id = -11;
             sqlite3_finalize(stmt);
             goto cleanup;
@@ -402,6 +413,20 @@ int update_entry(entry* entry_arg, entry* prev_entry){
         return -50;
     }
     sqlite3_stmt* stmt;
+    if(sqlite3_prepare_v2(db,"SELECT COUNT(*) FROM destination WHERE folder_path = (?)",-1,&stmt,NULL)!=SQLITE_OK){
+        return -10;
+    }
+    if(sqlite3_bind_text(stmt,1,entry_arg->destination,-1,SQLITE_TRANSIENT)!=SQLITE_OK){
+        return -11;
+    }
+    if(sqlite3_step(stmt)!=SQLITE_ROW){
+        return -12;
+    }
+    if(sqlite3_column_int(stmt,0)>0){
+        return -200;
+    }
+    sqlite3_finalize(stmt);
+    stmt=NULL;
     if(sqlite3_prepare_v2(db,"UPDATE destination SET folder_path=(?) WHERE folder_path=(?) RETURNING folder_id",-1,&stmt,NULL)!=SQLITE_OK){
         sqlite3_finalize(stmt);
         return -11;
@@ -634,28 +659,20 @@ filterPair* get_filters(char* destination_folder, int* size){
     sqlite3_stmt *stmt;
     int destination_id = get_destination_id(destination_folder);
     if(destination_id<1){
-        printf("FF");
-        fflush(stdout);
         return NULL;
     }
 
     if(sqlite3_prepare_v2(db,"SELECT count(*) FROM filters INNER JOIN "
                                "link ON filters.filter_id = link.filter_id WHERE "
                                "link.destination_folder_id = (?)",-1,&stmt,NULL)!=SQLITE_OK){
-        printf("A");
-        fflush(stdout);
         return NULL;
     }
     if(sqlite3_bind_int(stmt,1,destination_id)!=SQLITE_OK){
         sqlite3_finalize(stmt);
-        printf("B");
-        fflush(stdout);
         return NULL;
     }
     if(sqlite3_step(stmt)!=SQLITE_ROW){
         sqlite3_finalize(stmt);
-        printf("C");
-        fflush(stdout);
         return NULL;
     }
     int filters_count=sqlite3_column_int(stmt,0);
@@ -669,15 +686,11 @@ filterPair* get_filters(char* destination_folder, int* size){
                                "link ON filters.filter_id = link.filter_id WHERE "
                                "link.destination_folder_id = (?)",-1,&stmt,NULL)!=SQLITE_OK){
         free(res);
-        printf("SQLite Error: %s\n", sqlite3_errmsg(db));
-        fflush(stdout);
         return NULL;
     }
     if(sqlite3_bind_int(stmt,1,destination_id)!=SQLITE_OK){
         sqlite3_finalize(stmt);
         free(res);
-        printf("E");
-        fflush(stdout);
         return NULL;
     }
     int i = 0;
@@ -685,8 +698,6 @@ filterPair* get_filters(char* destination_folder, int* size){
         filterPair res_part;
         char *filter=(char*)sqlite3_column_text(stmt,0);
         char *type=(char*)sqlite3_column_text(stmt,1);
-        printf("Filter[%d]: %s | Type: %s\n", i, filter ? filter : "NULL", type ? type : "NULL");
-        fflush(stdout);
         if(filter==NULL || type==NULL){
             continue;
         }
@@ -698,8 +709,6 @@ filterPair* get_filters(char* destination_folder, int* size){
     if(i==0){
         sqlite3_finalize(stmt);
         free(res);
-        printf("G");
-        fflush(stdout);
         return NULL;
     }
     if (i < filters_count) {

@@ -11,6 +11,7 @@ extern "C" {
 #include "script.h" // write_entry and update_entry
 }
 
+
 namespace Ui {
 class rulesetCreate;
 }

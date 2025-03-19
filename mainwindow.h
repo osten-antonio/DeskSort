@@ -22,9 +22,10 @@ class MainWindow : public QMainWindow
 public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
-
+    void drawEntries();
 private:
     Ui::MainWindow *ui;
+    QWidget *containerWidget;
 
 
 private slots:
