@@ -76,6 +76,9 @@ rulesetCreate::rulesetCreate(std::vector<filterPair> *filters_args,std::vector<s
     prev_entry_arg->filters=prev_filters_c;
     prev_entry_arg->filter_count=filters_args->size();
 
+    QPushButton *delete_button = new QPushButton(this);
+    delete_button->setText("Delete");
+    delete_button->setGeometry(28,390,80,24);
 
     ui->setupUi(this);
     ui->destinationLabel->setText(QString::fromStdString(destination));
@@ -150,8 +153,15 @@ rulesetCreate::rulesetCreate(std::vector<filterPair> *filters_args,std::vector<s
     connect(ui->edit_source,&QPushButton::clicked,this,&rulesetCreate::editSource);
     connect(ui->delete_source,&QPushButton::clicked,this,&rulesetCreate::deleteSource);
     connect(ui->pushButton,&QPushButton::clicked,this,[this,prev_entry_arg](){
-
         editEntry(prev_entry_arg);
+    });
+    connect(delete_button,&QPushButton::clicked,this,[this,prev_entry_arg](){\
+        QMessageBox::StandardButton confirm = QMessageBox::question(this, "Confirmation", "Are you sure you want to delete?",
+                                    QMessageBox::Yes|QMessageBox::No);
+        if(confirm == QMessageBox::Yes){
+            int res = delete_entry(prev_entry_arg);
+            qDebug() << res;
+        }
     });
 }
 rulesetCreate::~rulesetCreate()

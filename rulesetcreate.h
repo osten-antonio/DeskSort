@@ -50,6 +50,7 @@ private:
     QString selected_filter;
     QString selected_type;
     void addFilters();
+    void deleteEntry(entry* prev_entry);
     void addSource();
     void editFilter();
     void editSource();

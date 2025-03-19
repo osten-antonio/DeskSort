@@ -114,7 +114,124 @@ int *get_destination_ids() {
     return res;
 }
 
-int write_entry(entry* entry_arg, bool from_update) {
+int delete_entry(entry* prev_entry){
+    int connect = connect_db();
+    if(connect!=0){
+        return -100;
+    }
+    sqlite3_exec(db, "PRAGMA foreign_keys = ON;", NULL, NULL, NULL);
+    sqlite3_exec(db,"BEGIN TRANSACTION;",NULL,NULL,NULL);
+    sqlite3_stmt* stmt;
+    if(sqlite3_prepare_v2(db,"SELECT DISTINCT filter_id FROM link "
+                               "INNER JOIN destination ON "
+                               "link.destination_folder_id = destination.folder_id WHERE destination.folder_path = (?)",-1,
+                           &stmt, NULL)!=SQLITE_OK){
+        sqlite3_finalize(stmt);
+        sqlite3_exec(db, "ROLLBACK TRANSACTION;", NULL, NULL, NULL);
+        sqlite3_exec(db, "END TRANSACTION;", NULL, NULL, NULL);
+        return -1;
+    }
+    if(sqlite3_bind_text(stmt,1,prev_entry->destination,-1,SQLITE_TRANSIENT)!=SQLITE_OK){
+        sqlite3_finalize(stmt);
+        sqlite3_exec(db, "ROLLBACK TRANSACTION;", NULL, NULL, NULL);
+        sqlite3_exec(db, "END TRANSACTION;", NULL, NULL, NULL);
+        return -2;
+    }
+    while(sqlite3_step(stmt) == SQLITE_ROW){
+        sqlite3_stmt* stmt2;
+        if(sqlite3_prepare_v2(db,"DELETE FROM filters WHERE filter_id = (?)",-1,&stmt2,NULL)!=SQLITE_OK){
+            sqlite3_finalize(stmt);
+            sqlite3_finalize(stmt2);
+            sqlite3_exec(db, "ROLLBACK TRANSACTION;", NULL, NULL, NULL);
+            sqlite3_exec(db, "END TRANSACTION;", NULL, NULL, NULL);
+            return -3;
+        }
+        if(sqlite3_bind_int(stmt2,1,sqlite3_column_int(stmt,0))!=SQLITE_OK){
+            sqlite3_finalize(stmt);
+            sqlite3_finalize(stmt2);
+            sqlite3_exec(db, "ROLLBACK TRANSACTION;", NULL, NULL, NULL);
+            sqlite3_exec(db, "END TRANSACTION;", NULL, NULL, NULL);
+            return -4;
+        }
+        if(sqlite3_step(stmt2)!=SQLITE_DONE){
+            sqlite3_finalize(stmt);
+            sqlite3_finalize(stmt2);
+            sqlite3_exec(db, "ROLLBACK TRANSACTION;", NULL, NULL, NULL);
+            sqlite3_exec(db, "END TRANSACTION;", NULL, NULL, NULL);
+            return -5;
+        }
+        sqlite3_finalize(stmt2);
+        stmt2=NULL;
+    }
+    sqlite3_finalize(stmt);
+    stmt=NULL;
+    if(sqlite3_prepare_v2(db,"SELECT DISTINCT source_folder_id FROM link "
+                               "INNER JOIN destination ON "
+                               "link.destination_folder_id = destination.folder_id WHERE destination.folder_path = (?)",-1,
+                           &stmt, NULL)!=SQLITE_OK){
+        sqlite3_finalize(stmt);
+        sqlite3_exec(db, "ROLLBACK TRANSACTION;", NULL, NULL, NULL);
+        sqlite3_exec(db, "END TRANSACTION;", NULL, NULL, NULL);
+        return -6;
+    }
+    if(sqlite3_bind_text(stmt,1,prev_entry->destination,-1,SQLITE_TRANSIENT)!=SQLITE_OK){
+        sqlite3_finalize(stmt);
+        sqlite3_exec(db, "ROLLBACK TRANSACTION;", NULL, NULL, NULL);
+        sqlite3_exec(db, "END TRANSACTION;", NULL, NULL, NULL);
+        return -7;
+    }
+    while(sqlite3_step(stmt) == SQLITE_ROW){
+        sqlite3_stmt* stmt2;
+        if(sqlite3_prepare_v2(db,"DELETE FROM source WHERE folder_id = (?)",-1,&stmt2,NULL)!=SQLITE_OK){
+            sqlite3_finalize(stmt);
+            sqlite3_finalize(stmt2);
+            sqlite3_exec(db, "ROLLBACK TRANSACTION;", NULL, NULL, NULL);
+            sqlite3_exec(db, "END TRANSACTION;", NULL, NULL, NULL);
+            return -8;
+        }
+        if(sqlite3_bind_int(stmt2,1,sqlite3_column_int(stmt,0))!=SQLITE_OK){
+            sqlite3_finalize(stmt);
+            sqlite3_finalize(stmt2);
+            sqlite3_exec(db, "ROLLBACK TRANSACTION;", NULL, NULL, NULL);
+            sqlite3_exec(db, "END TRANSACTION;", NULL, NULL, NULL);
+            return -9;
+        }
+        if(sqlite3_step(stmt2)!=SQLITE_DONE){
+            sqlite3_finalize(stmt);
+            sqlite3_finalize(stmt2);
+            sqlite3_exec(db, "ROLLBACK TRANSACTION;", NULL, NULL, NULL);
+            sqlite3_exec(db, "END TRANSACTION;", NULL, NULL, NULL);
+            return -10;
+        }
+        sqlite3_finalize(stmt2);
+        stmt2=NULL;
+    }
+    sqlite3_finalize(stmt);
+    stmt=NULL;
+    if(sqlite3_prepare_v2(db,"DELETE FROM destination WHERE folder_path = (?)",-1,&stmt,NULL)!=SQLITE_OK){
+        sqlite3_finalize(stmt);
+        sqlite3_exec(db, "ROLLBACK TRANSACTION;", NULL, NULL, NULL);
+        sqlite3_exec(db, "END TRANSACTION;", NULL, NULL, NULL);
+        return -11;
+    }
+    if(sqlite3_bind_text(stmt,1,prev_entry->destination,-1,SQLITE_TRANSIENT)!=SQLITE_OK){
+        sqlite3_finalize(stmt);
+        sqlite3_exec(db, "ROLLBACK TRANSACTION;", NULL, NULL, NULL);
+        sqlite3_exec(db, "END TRANSACTION;", NULL, NULL, NULL);
+        return -12;
+    }
+    if(sqlite3_step(stmt)!=SQLITE_DONE){
+        sqlite3_finalize(stmt);
+        sqlite3_exec(db, "ROLLBACK TRANSACTION;", NULL, NULL, NULL);
+        sqlite3_exec(db, "END TRANSACTION;", NULL, NULL, NULL);
+        return -13;
+    }
+    sqlite3_finalize(stmt);
+    sqlite3_exec(db, "END TRANSACTION;", NULL, NULL, NULL);
+    return 0;
+}
+
+int write_entry(entry* entry_arg, bool from_update) { // SEE IF THERE IS TEH SAME DESTINATION LATER, IF THERE IS REJECT
 
     if(entry_arg->filter_count < 1){
         return -30;
@@ -273,6 +390,7 @@ cleanup:
 
 
 int update_entry(entry* entry_arg, entry* prev_entry){
+    sqlite3_exec(db, "PRAGMA foreign_keys = ON;", NULL, NULL, NULL);
     sqlite3_exec(db,"BEGIN TRANSACTION;",NULL,NULL,NULL);
     if(entry_arg->filter_count < 1){
         return -30;

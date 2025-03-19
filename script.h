@@ -45,6 +45,7 @@ int* get_destination_ids();
 int write_entry(entry* entry_arg, bool from_update);
 int update_entry(entry* entry_arg, entry* prev_entry);
 char** get_destination(int* arr_size);
+int delete_entry(entry* prev_entry);
 filterPair *get_filters(char* destination_folder, int* size);
 char** get_sources(char* destination_folder, int* size);
 int destination(int id, char *path);
