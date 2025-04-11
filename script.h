@@ -10,6 +10,7 @@
 #include <string.h>
 #include <windows.h>
 #include <stdbool.h>
+#include <unistd.h>
 
 
 

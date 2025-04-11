@@ -1,5 +1,6 @@
 #include "script.h"
 
+#define BUFFER_SIZE 4096
 
 sqlite3 *db;
 int connect_db(){
@@ -10,28 +11,26 @@ int connect_db(){
     return 0;
 }
 
-int process(folderPair destination_data,const char* filter,const char* filter_type) {
-
-    DIR *dir = opendir(destination_data.source_path);
+int process(folderPair destination_data,char* filter,const char* filter_type) {
     if(destination_data.source_path[strlen(destination_data.source_path)-1] != '\\'){
         // Ensures that path is in right format \ or no \ //
         destination_data.source_path[strlen(destination_data.source_path)] = '\\';
         destination_data.source_path[strlen(destination_data.source_path)+1] = '\0';
     }
-
+    DIR *dir = opendir(destination_data.source_path);
     if(!dir){
-        return 0;
+        return -1; // Source cannot be opened
     }
     if(!strcmp(filter_type,"prefix")){
         struct dirent *entry;
         while ((entry = readdir(dir)) != NULL) {
-
+            // printf("Cehcking: %s\n",entry->d_name);
             char fullPath[32768];
             snprintf(fullPath, sizeof(fullPath), "%s\\%s", destination_data.source_path, entry->d_name);
 
             // Get file attributes
             DWORD attrs = GetFileAttributes(fullPath);
-            if((attrs & INVALID_FILE_ATTRIBUTES) ||
+            if((attrs == INVALID_FILE_ATTRIBUTES) ||
                 (attrs & FILE_ATTRIBUTE_DIRECTORY) ||
                 (attrs & FILE_ATTRIBUTE_REPARSE_POINT)){
                 /*
@@ -39,29 +38,409 @@ int process(folderPair destination_data,const char* filter,const char* filter_ty
                  * & (bitwise and) is used to check if a flag is set in the attributes, or when working with bitmasks
                  * the constant are bitmasks, eg if attrs = 10111 and the bitmask is 00111 the result is 00111
                  * if the resulting is non zero, then the attribute is set
+                 * == Is used to test for error or other stuff
                  */
+                // printf("a: %s\n",entry->d_name);
                 continue;
             }
             if (!strcmp(entry->d_name, ".")|| !strcmp(entry->d_name, "..")) {
                 // Skips current and parent directory (. & ..)
+                // printf("b: %s\n",entry->d_name);
                 continue;
             }
 
+            printf("Cehcking: %s\n",entry->d_name);
             if(!strncmp(entry->d_name, filter, strlen(filter))){
                 // move
+                // printf("%s\n",entry->d_name);
+                char destination_file_path[32768];
+
+                // Copies destination path, with format of destination paht,entry->d_name(directory_name or file name)
+                snprintf(destination_file_path, sizeof(destination_file_path), "%s\\%s", destination_data.destination_path, entry->d_name);
+                destination_file_path[sizeof(destination_file_path) - 1] = '\0';
+
+                // Check for duplicate, appends count to file name
+                int count = strlen(entry->d_name);
+                char cur_file[count + 1];
+
+                strcpy(cur_file, entry->d_name);
+                while(count>0 && entry->d_name[count-1]!='.'){
+                    count--;
+                }
+                if(strstr(entry->d_name, ".")){
+                    char extension[strlen(entry->d_name)-count + 1];
+                    strncpy(extension,entry->d_name+count,strlen(entry->d_name)-count);
+                    extension[strlen(extension)]='\0';
+                    cur_file[count-1] = '\0'; //Cuts the file name to not include hte extension
+
+                    count = 1;
+                    // printf("Extension:%s\n",extension);
+                    // printf("Cur_file:%s\n",cur_file);
+                    while(!access(destination_file_path,F_OK)){
+                        snprintf(destination_file_path, sizeof(destination_file_path), "%s\\%s[%d].%s",
+                                 destination_data.destination_path, cur_file, count,extension);
+                        count++;
+                    }
+                    // printf("Duplicated file: %s\n",destination_file_path);
+                    // printf("Destination path: %s\n",destination_file_path);
+                }else{
+                    count = 1;
+                    while(!access(destination_file_path,F_OK)){
+                        snprintf(destination_file_path, sizeof(destination_file_path), "%s\\%s[%d]",
+                                 destination_data.destination_path, cur_file, count);
+                        count++;
+                    }
+                }
+
+                FILE *source_file = fopen(fullPath, "rb");
+                if(source_file == NULL){
+                    return -2; // Source file cannot be opened
+                }
+
+                FILE *destination_file = fopen(destination_file_path, "wb");
+                if(destination_file == NULL){
+                    fclose(source_file);
+                    return -3;
+                }
+
+                unsigned char buffer[BUFFER_SIZE]; // Unsigend char because dealing wiht raw bytes, no negatiges
+                size_t bytes; // size t represents the size of any object in the memory
+                // printf("Destination path: %s\n",destination_file_path);
+                while((bytes = fread(buffer, 1, BUFFER_SIZE, source_file)) > 0){
+                    fwrite(buffer, 1, bytes, destination_file); // Write from buffer, exactly bytes byte, 1 byte at a time at destination_file
+                }
+                remove(fullPath);
+                fclose(source_file);
+                fclose(destination_file);
             }
         }
 
 
 
     }else if(!strcmp(filter_type,"suffix")){
+        struct dirent *entry;
+        while ((entry = readdir(dir)) != NULL) {
+            if(entry->d_name!=NULL){
+                // printf("Cehcking: %s\n",entry->d_name);
+                char fullPath[32768];
+                snprintf(fullPath, sizeof(fullPath), "%s\\%s", destination_data.source_path, entry->d_name);
+
+                // Get file attributes
+                DWORD attrs = GetFileAttributes(fullPath);
+                if((attrs == INVALID_FILE_ATTRIBUTES) ||
+                    (attrs & FILE_ATTRIBUTE_DIRECTORY) ||
+                    (attrs & FILE_ATTRIBUTE_REPARSE_POINT)){
+                    /*
+                     * Skips file if it is a folder, symbolic or an invalid file
+                     * & (bitwise and) is used to check if a flag is set in the attributes, or when working with bitmasks
+                     * the constant are bitmasks, eg if attrs = 10111 and the bitmask is 00111 the result is 00111
+                     * if the resulting is non zero, then the attribute is set
+                     * == Is used to test for error or other stuff
+                     */
+                    // printf("a: %s\n",entry->d_name);
+                    continue;
+                }
+                if (!strcmp(entry->d_name, ".")|| !strcmp(entry->d_name, "..")) {
+                    // Skips current and parent directory (. & ..)
+                    // printf("b: %s\n",entry->d_name);
+                    continue;
+                }
+                int count = strlen(entry->d_name);
+                char cur_file[count + 1];
+
+                strcpy(cur_file, entry->d_name);
+                while(count>0 && entry->d_name[count-1]!='.'){
+                    count--;
+                }
+                if(count < strlen(filter)-1){
+                    continue; // Current file name is shorter than the filter
+                }
+                cur_file[count-1] = '\0'; //Cuts the file name to not include hte extension
+
+                // printf("%s\n",cur_file);
+                if(!strncmp(&cur_file[strlen(cur_file)-strlen(filter)], filter, strlen(filter))){
+                    // move
+                    // printf("Moving %s\n",entry->d_name);
+                    char destination_file_path[32768];
+
+                    snprintf(destination_file_path, sizeof(destination_file_path), "%s\\%s", destination_data.destination_path, entry->d_name);
+                    destination_file_path[sizeof(destination_file_path) - 1] = '\0';
+
+                    // Check for duplicate, appends count to file name
+                    int count = strlen(entry->d_name);
+                    char cur_file[count + 1];
+
+                    strcpy(cur_file, entry->d_name);
+                    while(count>0 && entry->d_name[count-1]!='.'){
+                        count--;
+                    }
+                    if(strstr(entry->d_name, ".")){
+                        char extension[strlen(entry->d_name)-count + 1];
+                        strncpy(extension,entry->d_name+count,strlen(entry->d_name)-count);
+                        extension[strlen(extension)]='\0';
+                        cur_file[count-1] = '\0'; //Cuts the file name to not include hte extension
+
+                        count = 1;
+                        // printf("Extension:%s\n",extension);
+                        // printf("Cur_file:%s\n",cur_file);
+                        while(!access(destination_file_path,F_OK)){
+                            snprintf(destination_file_path, sizeof(destination_file_path), "%s\\%s[%d].%s",
+                                     destination_data.destination_path, cur_file, count,extension);
+                            count++;
+                        }
+                        // printf("Duplicated file: %s\n",destination_file_path);
+                        // printf("Destination path: %s\n",destination_file_path);
+                    }else{
+                        while(!access(destination_file_path,F_OK)){
+                            snprintf(destination_file_path, sizeof(destination_file_path), "%s\\%s[%d]",
+                                     destination_data.destination_path, cur_file, count);
+                            count++;
+                        }
+                    }
+
+
+                    FILE *source_file = fopen(fullPath, "rb");
+                    if(source_file == NULL){
+                        return -2; // Source file cannot be opened
+                    }
+
+                    FILE *destination_file = fopen(destination_file_path, "wb");
+                    if(destination_file == NULL){
+                        fclose(source_file);
+                        return -3;
+                    }
+
+                    unsigned char buffer[BUFFER_SIZE];
+                    size_t bytes;
+                    // printf("Destination path: %s\n",destination_file_path);
+                    while((bytes = fread(buffer, 1, BUFFER_SIZE, source_file)) > 0){
+                        fwrite(buffer, 1, bytes, destination_file);
+                    }
+                    remove(fullPath);
+                    fclose(source_file);
+                    fclose(destination_file);
+                }
+            }
+        }
 
     }else if(!strcmp(filter_type,"containing")){
+        struct dirent *entry;
 
+        while ((entry = readdir(dir)) != NULL) {
+            if(entry->d_name!=NULL){
+                char fullPath[32768];
+                // printf("Cehcking: %s\n",entry->d_name);
+                snprintf(fullPath, sizeof(fullPath), "%s\\%s", destination_data.source_path, entry->d_name);
+
+                // Get file attributes
+                DWORD attrs = GetFileAttributes(fullPath);
+                if((attrs == INVALID_FILE_ATTRIBUTES) ||
+                    (attrs & FILE_ATTRIBUTE_DIRECTORY) ||
+                    (attrs & FILE_ATTRIBUTE_REPARSE_POINT)){
+                    /*
+                     * Skips file if it is a folder, symbolic or an invalid file
+                     * & (bitwise and) is used to check if a flag is set in the attributes, or when working with bitmasks
+                     * the constant are bitmasks, eg if attrs = 10111 and the bitmask is 00111 the result is 00111
+                     * if the resulting is non zero, then the attribute is set
+                     * == Is used to test for error or other stuff
+                     */
+                    // printf("a: %s\n",entry->d_name);
+                    continue;
+                }
+                if (!strcmp(entry->d_name, ".")|| !strcmp(entry->d_name, "..")) {
+                    // Skips current and parent directory (. & ..)
+                    // printf("b: %s\n",entry->d_name);
+                    continue;
+                }
+
+                int count = strlen(entry->d_name);
+                char cur_file[count + 1];
+
+                strcpy(cur_file, entry->d_name);
+                while(count>0 && entry->d_name[count-1]!='.'){
+                    count--;
+                }
+                if(count < strlen(filter)-1){
+                    continue; // Current file name is shorter than the filter
+                }
+                cur_file[count-1] = '\0'; //Cuts the file name to not include hte extension
+
+                if(strstr(cur_file,filter)){ // wtf is this function, dont use sliding window lol
+                    // printf("Moving %s\n",entry->d_name);
+                    char destination_file_path[32768];
+
+                    snprintf(destination_file_path, sizeof(destination_file_path), "%s\\%s", destination_data.destination_path, entry->d_name);
+                    destination_file_path[sizeof(destination_file_path) - 1] = '\0';
+
+                    // Check for duplicate, appends count to file name
+                    int count = strlen(entry->d_name);
+                    char cur_file[count + 1];
+
+                    strcpy(cur_file, entry->d_name);
+                    while(count>0 && entry->d_name[count-1]!='.'){
+                        count--;
+                    }
+                    if(strstr(entry->d_name, ".")){
+                        char extension[strlen(entry->d_name)-count + 1];
+                        strncpy(extension,entry->d_name+count,strlen(entry->d_name)-count);
+                        extension[strlen(extension)]='\0';
+                        cur_file[count-1] = '\0'; //Cuts the file name to not include hte extension
+
+                        count = 1;
+                        // printf("Extension:%s\n",extension);
+                        // printf("Cur_file:%s\n",cur_file);
+                        while(!access(destination_file_path,F_OK)){
+                            snprintf(destination_file_path, sizeof(destination_file_path), "%s\\%s[%d].%s",
+                                     destination_data.destination_path, cur_file, count,extension);
+                            count++;
+                        }
+                        // printf("Duplicated file: %s\n",destination_file_path);
+                        // printf("Destination path: %s\n",destination_file_path);
+                    }else{
+                        while(!access(destination_file_path,F_OK)){
+                            snprintf(destination_file_path, sizeof(destination_file_path), "%s\\%s[%d]",
+                                     destination_data.destination_path, cur_file, count);
+                            count++;
+                        }
+                    }
+
+                    // printf("Destination path: %s\n",destination_file_path);
+                    // printf("Full: %s\n",fullPath);
+                    FILE *source_file = fopen(fullPath, "rb");
+                    if(source_file == NULL){
+                        return -2; // Source file cannot be opened
+                    }
+
+                    FILE *destination_file = fopen(destination_file_path, "wb");
+                    if(destination_file == NULL){
+                        fclose(source_file);
+                        return -3;
+                    }
+
+                    unsigned char buffer[BUFFER_SIZE];
+                    size_t bytes;
+                    // printf("Destination path: %s\n",destination_file_path);
+                    while((bytes = fread(buffer, 1, BUFFER_SIZE, source_file)) > 0){
+                        fwrite(buffer, 1, bytes, destination_file);
+                    }
+                    remove(fullPath);
+                    fclose(source_file);
+                    fclose(destination_file);
+                }else{
+                    continue;
+                }
+            }
+        }
     }else if(!strcmp(filter_type,"extension")){
+        int length = strlen(filter);
+        if (length == 0) {
+            return 10;  // Return 10 if the string is empty
+        }
+        while(filter[0]=='.'){ // Shifts filter to the left until no . in front of filter
+            if (length == 0) return 10;
+            for(int i = 0;i<length-1;i++){
+                filter[i]=filter[i+1];
+            }
+            filter[length-1] = '\0';
+            length = strlen(filter);
+            if (length == 0) {
+                return 10;  // Return 10 if the string is empty
+            }
+        }
+        while(filter[length-1]=='.'){
+            filter[length-1] = '\0'; // Removes trailing . by making the positiion of the . a null pointer
+            length = strlen(filter);
+        }
+        struct dirent *entry;
+        while ((entry = readdir(dir)) != NULL) {
+            if(entry->d_name!=NULL){
+                char fullPath[32768];
+                // printf("Cehcking: %s\n",entry->d_name);
+                snprintf(fullPath, sizeof(fullPath), "%s\\%s", destination_data.source_path, entry->d_name);
 
+                // Get file attributes
+                DWORD attrs = GetFileAttributes(fullPath);
+                if((attrs == INVALID_FILE_ATTRIBUTES) ||
+                    (attrs & FILE_ATTRIBUTE_DIRECTORY) ||
+                    (attrs & FILE_ATTRIBUTE_REPARSE_POINT)){
+                    /*
+                     * Skips file if it is a folder, symbolic or an invalid file
+                     * & (bitwise and) is used to check if a flag is set in the attributes, or when working with bitmasks
+                     * the constant are bitmasks, eg if attrs = 10111 and the bitmask is 00111 the result is 00111
+                     * if the resulting is non zero, then the attribute is set
+                     * == Is used to test for error or other stuff
+                     */
+                    // printf("a: %s\n",entry->d_name);
+                    continue;
+                }
+                if (!strcmp(entry->d_name, ".")|| !strcmp(entry->d_name, "..")) {
+                    // Skips current and parent directory (. & ..)
+                    // printf("b: %s\n",entry->d_name);
+                    continue;
+                }
+                if(!strcmp(&entry->d_name[strlen(entry->d_name)-strlen(filter)],filter)){
+                    char destination_file_path[32768];
+
+                    snprintf(destination_file_path, sizeof(destination_file_path), "%s\\%s", destination_data.destination_path, entry->d_name);
+                    destination_file_path[sizeof(destination_file_path) - 1] = '\0';
+
+                    // Check for duplicate, appends count to file name
+                    int count = strlen(entry->d_name);
+                    char cur_file[count + 1];
+
+                    strcpy(cur_file, entry->d_name);
+                    while(count>0 && entry->d_name[count-1]!='.'){
+                        count--;
+                    }
+                    if(strstr(entry->d_name, ".")){
+                        char extension[strlen(entry->d_name)-count + 1];
+                        strncpy(extension,entry->d_name+count,strlen(entry->d_name)-count);
+                        extension[strlen(extension)]='\0';
+                        cur_file[count-1] = '\0'; //Cuts the file name to not include hte extension
+
+                        count = 1;
+                        // printf("Extension:%s\n",extension);
+                        // printf("Cur_file:%s\n",cur_file);
+                        while(!access(destination_file_path,F_OK)){
+                            snprintf(destination_file_path, sizeof(destination_file_path), "%s\\%s[%d].%s",
+                                     destination_data.destination_path, cur_file, count,extension);
+                            count++;
+                        }
+                        // printf("Duplicated file: %s\n",destination_file_path);
+                        // printf("Destination path: %s\n",destination_file_path);
+                    }else{
+                        while(!access(destination_file_path,F_OK)){
+                            snprintf(destination_file_path, sizeof(destination_file_path), "%s\\%s[%d]",
+                                     destination_data.destination_path, cur_file, count);
+                            count++;
+                        }
+                    }
+                    // printf("Destination path: %s\n",destination_file_path);
+                    // printf("Full: %s\n",fullPath);
+                    FILE *source_file = fopen(fullPath, "rb");
+                    if(source_file == NULL){
+                        return -2; // Source file cannot be opened
+                    }
+
+                    FILE *destination_file = fopen(destination_file_path, "wb");
+                    if(destination_file == NULL){
+                        fclose(source_file);
+                        return -3;
+                    }
+
+                    unsigned char buffer[BUFFER_SIZE];
+                    size_t bytes;
+                    printf("Destination path: %s\n",destination_file_path);
+                    while((bytes = fread(buffer, 1, BUFFER_SIZE, source_file)) > 0){
+                        fwrite(buffer, 1, bytes, destination_file);
+                    }
+                    remove(fullPath);
+                    fclose(source_file);
+                    fclose(destination_file);
+                }
+            }
+        }
     }
-
     // Check for filter type
     // Scan through all of the source file (data), with the appropiate cehcks (prefix, suffix, contain)
     // If it matches perform move
