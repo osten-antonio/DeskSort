@@ -99,7 +99,7 @@
       <string>Interval (Minutes)</string>
      </property>
     </widget>
-    <widget class="QSpinBox" name="spinBox">
+    <widget class="QSpinBox" name="interval">
      <property name="geometry">
       <rect>
        <x>390</x>

@@ -12,6 +12,17 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
 
+include(FetchContent)
+
+FetchContent_Declare(
+  json
+  GIT_REPOSITORY https://github.com/nlohmann/json.git
+  GIT_TAG v3.11.3
+)
+
+FetchContent_MakeAvailable(json)
+
+
 
 set(PROJECT_SOURCES
         main.cpp
@@ -70,6 +81,13 @@ target_sources(organizer PRIVATE
 target_link_libraries(organizer PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
 
 
+target_link_libraries(organizer PRIVATE nlohmann_json::nlohmann_json)
+
+if(MSVC) # Check if using Microsoft Visual C++ compiler
+    set_target_properties(your_target_name PROPERTIES
+        RESOURCE "${CMAKE_CURRENT_SOURCE_DIR}/organizer.manifest"
+    )
+endif()
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
 # If you are developing for iOS or macOS you should consider setting an

@@ -12,37 +12,46 @@ int connect_db(){
 }
 
 int process(folderPair destination_data,char* filter,const char* filter_type) {
-    if(destination_data.source_path[strlen(destination_data.source_path)-1] != '\\'){
+    if(destination_data.source_path[strlen(destination_data.source_path)-1] != '/'){
         // Ensures that path is in right format \ or no \ //
-        destination_data.source_path[strlen(destination_data.source_path)] = '\\';
+        destination_data.source_path[strlen(destination_data.source_path)] = '/';
         destination_data.source_path[strlen(destination_data.source_path)+1] = '\0';
     }
     DIR *dir = opendir(destination_data.source_path);
     if(!dir){
         return -1; // Source cannot be opened
     }
-    if(!strcmp(filter_type,"prefix")){
+    printf("%s",filter_type);
+    fflush(stdout);
+    if(!strcmp(filter_type,"Prefix")){
         struct dirent *entry;
         while ((entry = readdir(dir)) != NULL) {
-            // printf("Cehcking: %s\n",entry->d_name);
+            printf("Cehcking: %s\n",entry->d_name);
             char fullPath[32768];
             snprintf(fullPath, sizeof(fullPath), "%s\\%s", destination_data.source_path, entry->d_name);
+            fullPath[sizeof(fullPath) - 1] = '\0';
 
-            // Get file attributes
-            DWORD attrs = GetFileAttributes(fullPath);
-            if((attrs == INVALID_FILE_ATTRIBUTES) ||
-                (attrs & FILE_ATTRIBUTE_DIRECTORY) ||
-                (attrs & FILE_ATTRIBUTE_REPARSE_POINT)){
-                /*
-                 * Skips file if it is a folder, symbolic or an invalid file
-                 * & (bitwise and) is used to check if a flag is set in the attributes, or when working with bitmasks
-                 * the constant are bitmasks, eg if attrs = 10111 and the bitmask is 00111 the result is 00111
-                 * if the resulting is non zero, then the attribute is set
-                 * == Is used to test for error or other stuff
-                 */
-                // printf("a: %s\n",entry->d_name);
+            FILE* f = fopen(fullPath, "r");
+            if (f) { // File exists
+                fclose(f);
+            } else {
                 continue;
             }
+            // // Get file attributes
+            // DWORD attrs = GetFileAttributes(fullPath);
+            // if((attrs == INVALID_FILE_ATTRIBUTES) ||
+            //     (attrs & FILE_ATTRIBUTE_DIRECTORY) ||
+            //     (attrs & FILE_ATTRIBUTE_REPARSE_POINT)){
+            //     /*
+            //      * Skips file if it is a folder, symbolic or an invalid file
+            //      * & (bitwise and) is used to check if a flag is set in the attributes, or when working with bitmasks
+            //      * the constant are bitmasks, eg if attrs = 10111 and the bitmask is 00111 the result is 00111
+            //      * if the resulting is non zero, then the attribute is set
+            //      * == Is used to test for error or other stuff
+            //      */
+            //     // printf("a: %s\n",entry->d_name);
+            //     continue;
+            // }
             if (!strcmp(entry->d_name, ".")|| !strcmp(entry->d_name, "..")) {
                 // Skips current and parent directory (. & ..)
                 // printf("b: %s\n",entry->d_name);
@@ -56,7 +65,7 @@ int process(folderPair destination_data,char* filter,const char* filter_type) {
                 char destination_file_path[32768];
 
                 // Copies destination path, with format of destination paht,entry->d_name(directory_name or file name)
-                snprintf(destination_file_path, sizeof(destination_file_path), "%s\\%s", destination_data.destination_path, entry->d_name);
+                snprintf(destination_file_path, sizeof(destination_file_path), "%s/%s", destination_data.destination_path, entry->d_name);
                 destination_file_path[sizeof(destination_file_path) - 1] = '\0';
 
                 // Check for duplicate, appends count to file name
@@ -70,14 +79,14 @@ int process(folderPair destination_data,char* filter,const char* filter_type) {
                 if(strstr(entry->d_name, ".")){
                     char extension[strlen(entry->d_name)-count + 1];
                     strncpy(extension,entry->d_name+count,strlen(entry->d_name)-count);
-                    extension[strlen(extension)]='\0';
+                    extension[strlen(entry->d_name)-count]='\0';
                     cur_file[count-1] = '\0'; //Cuts the file name to not include hte extension
 
                     count = 1;
                     // printf("Extension:%s\n",extension);
                     // printf("Cur_file:%s\n",cur_file);
                     while(!access(destination_file_path,F_OK)){
-                        snprintf(destination_file_path, sizeof(destination_file_path), "%s\\%s[%d].%s",
+                        snprintf(destination_file_path, sizeof(destination_file_path), "%s/%s[%d].%s",
                                  destination_data.destination_path, cur_file, count,extension);
                         count++;
                     }
@@ -86,7 +95,7 @@ int process(folderPair destination_data,char* filter,const char* filter_type) {
                 }else{
                     count = 1;
                     while(!access(destination_file_path,F_OK)){
-                        snprintf(destination_file_path, sizeof(destination_file_path), "%s\\%s[%d]",
+                        snprintf(destination_file_path, sizeof(destination_file_path), "%s/%s[%d]",
                                  destination_data.destination_path, cur_file, count);
                         count++;
                     }
@@ -109,37 +118,30 @@ int process(folderPair destination_data,char* filter,const char* filter_type) {
                 while((bytes = fread(buffer, 1, BUFFER_SIZE, source_file)) > 0){
                     fwrite(buffer, 1, bytes, destination_file); // Write from buffer, exactly bytes byte, 1 byte at a time at destination_file
                 }
-                remove(fullPath);
+
                 fclose(source_file);
                 fclose(destination_file);
-            }
+                remove(fullPath);
+                }
         }
 
 
 
-    }else if(!strcmp(filter_type,"suffix")){
+    }else if(!strcmp(filter_type,"Suffix")){
         struct dirent *entry;
         while ((entry = readdir(dir)) != NULL) {
             if(entry->d_name!=NULL){
-                // printf("Cehcking: %s\n",entry->d_name);
+                printf("Cehcking: %s\n",entry->d_name);
                 char fullPath[32768];
-                snprintf(fullPath, sizeof(fullPath), "%s\\%s", destination_data.source_path, entry->d_name);
+                snprintf(fullPath, sizeof(fullPath), "%s%s", destination_data.source_path, entry->d_name);
 
-                // Get file attributes
-                DWORD attrs = GetFileAttributes(fullPath);
-                if((attrs == INVALID_FILE_ATTRIBUTES) ||
-                    (attrs & FILE_ATTRIBUTE_DIRECTORY) ||
-                    (attrs & FILE_ATTRIBUTE_REPARSE_POINT)){
-                    /*
-                     * Skips file if it is a folder, symbolic or an invalid file
-                     * & (bitwise and) is used to check if a flag is set in the attributes, or when working with bitmasks
-                     * the constant are bitmasks, eg if attrs = 10111 and the bitmask is 00111 the result is 00111
-                     * if the resulting is non zero, then the attribute is set
-                     * == Is used to test for error or other stuff
-                     */
-                    // printf("a: %s\n",entry->d_name);
+                FILE* f = fopen(fullPath, "r");
+                if (f) { // File exists
+                    fclose(f);
+                } else {
                     continue;
                 }
+
                 if (!strcmp(entry->d_name, ".")|| !strcmp(entry->d_name, "..")) {
                     // Skips current and parent directory (. & ..)
                     // printf("b: %s\n",entry->d_name);
@@ -163,7 +165,7 @@ int process(folderPair destination_data,char* filter,const char* filter_type) {
                     // printf("Moving %s\n",entry->d_name);
                     char destination_file_path[32768];
 
-                    snprintf(destination_file_path, sizeof(destination_file_path), "%s\\%s", destination_data.destination_path, entry->d_name);
+                    snprintf(destination_file_path, sizeof(destination_file_path), "%s/%s", destination_data.destination_path, entry->d_name);
                     destination_file_path[sizeof(destination_file_path) - 1] = '\0';
 
                     // Check for duplicate, appends count to file name
@@ -177,7 +179,7 @@ int process(folderPair destination_data,char* filter,const char* filter_type) {
                     if(strstr(entry->d_name, ".")){
                         char extension[strlen(entry->d_name)-count + 1];
                         strncpy(extension,entry->d_name+count,strlen(entry->d_name)-count);
-                        extension[strlen(extension)]='\0';
+                        extension[strlen(entry->d_name)-count]='\0';
                         cur_file[count-1] = '\0'; //Cuts the file name to not include hte extension
 
                         count = 1;
@@ -216,37 +218,30 @@ int process(folderPair destination_data,char* filter,const char* filter_type) {
                     while((bytes = fread(buffer, 1, BUFFER_SIZE, source_file)) > 0){
                         fwrite(buffer, 1, bytes, destination_file);
                     }
-                    remove(fullPath);
+
                     fclose(source_file);
                     fclose(destination_file);
+                    remove(fullPath);
                 }
             }
         }
 
-    }else if(!strcmp(filter_type,"containing")){
+    }else if(!strcmp(filter_type,"Containing")){
         struct dirent *entry;
 
         while ((entry = readdir(dir)) != NULL) {
             if(entry->d_name!=NULL){
                 char fullPath[32768];
                 // printf("Cehcking: %s\n",entry->d_name);
-                snprintf(fullPath, sizeof(fullPath), "%s\\%s", destination_data.source_path, entry->d_name);
+                snprintf(fullPath, sizeof(fullPath), "%s%s", destination_data.source_path, entry->d_name);
 
-                // Get file attributes
-                DWORD attrs = GetFileAttributes(fullPath);
-                if((attrs == INVALID_FILE_ATTRIBUTES) ||
-                    (attrs & FILE_ATTRIBUTE_DIRECTORY) ||
-                    (attrs & FILE_ATTRIBUTE_REPARSE_POINT)){
-                    /*
-                     * Skips file if it is a folder, symbolic or an invalid file
-                     * & (bitwise and) is used to check if a flag is set in the attributes, or when working with bitmasks
-                     * the constant are bitmasks, eg if attrs = 10111 and the bitmask is 00111 the result is 00111
-                     * if the resulting is non zero, then the attribute is set
-                     * == Is used to test for error or other stuff
-                     */
-                    // printf("a: %s\n",entry->d_name);
+                FILE* f = fopen(fullPath, "r");
+                if (f) { // File exists
+                    fclose(f);
+                } else {
                     continue;
                 }
+
                 if (!strcmp(entry->d_name, ".")|| !strcmp(entry->d_name, "..")) {
                     // Skips current and parent directory (. & ..)
                     // printf("b: %s\n",entry->d_name);
@@ -269,7 +264,7 @@ int process(folderPair destination_data,char* filter,const char* filter_type) {
                     // printf("Moving %s\n",entry->d_name);
                     char destination_file_path[32768];
 
-                    snprintf(destination_file_path, sizeof(destination_file_path), "%s\\%s", destination_data.destination_path, entry->d_name);
+                    snprintf(destination_file_path, sizeof(destination_file_path), "%s/%s", destination_data.destination_path, entry->d_name);
                     destination_file_path[sizeof(destination_file_path) - 1] = '\0';
 
                     // Check for duplicate, appends count to file name
@@ -283,14 +278,14 @@ int process(folderPair destination_data,char* filter,const char* filter_type) {
                     if(strstr(entry->d_name, ".")){
                         char extension[strlen(entry->d_name)-count + 1];
                         strncpy(extension,entry->d_name+count,strlen(entry->d_name)-count);
-                        extension[strlen(extension)]='\0';
+                        extension[strlen(entry->d_name)-count]='\0';
                         cur_file[count-1] = '\0'; //Cuts the file name to not include hte extension
 
                         count = 1;
                         // printf("Extension:%s\n",extension);
                         // printf("Cur_file:%s\n",cur_file);
                         while(!access(destination_file_path,F_OK)){
-                            snprintf(destination_file_path, sizeof(destination_file_path), "%s\\%s[%d].%s",
+                            snprintf(destination_file_path, sizeof(destination_file_path), "%s/%s[%d].%s",
                                      destination_data.destination_path, cur_file, count,extension);
                             count++;
                         }
@@ -298,7 +293,7 @@ int process(folderPair destination_data,char* filter,const char* filter_type) {
                         // printf("Destination path: %s\n",destination_file_path);
                     }else{
                         while(!access(destination_file_path,F_OK)){
-                            snprintf(destination_file_path, sizeof(destination_file_path), "%s\\%s[%d]",
+                            snprintf(destination_file_path, sizeof(destination_file_path), "%s/%s[%d]",
                                      destination_data.destination_path, cur_file, count);
                             count++;
                         }
@@ -323,15 +318,17 @@ int process(folderPair destination_data,char* filter,const char* filter_type) {
                     while((bytes = fread(buffer, 1, BUFFER_SIZE, source_file)) > 0){
                         fwrite(buffer, 1, bytes, destination_file);
                     }
-                    remove(fullPath);
+
                     fclose(source_file);
                     fclose(destination_file);
+                    remove(fullPath);
                 }else{
                     continue;
                 }
             }
         }
-    }else if(!strcmp(filter_type,"extension")){
+    }else if(!strcmp(filter_type,"Extension")){
+
         int length = strlen(filter);
         if (length == 0) {
             return 10;  // Return 10 if the string is empty
@@ -351,58 +348,50 @@ int process(folderPair destination_data,char* filter,const char* filter_type) {
             filter[length-1] = '\0'; // Removes trailing . by making the positiion of the . a null pointer
             length = strlen(filter);
         }
+        // printf("filter: %s\n",filter);
         struct dirent *entry;
         while ((entry = readdir(dir)) != NULL) {
+            // printf("Check: %s\n",entry->d_name);
             if(entry->d_name!=NULL){
                 char fullPath[32768];
-                // printf("Cehcking: %s\n",entry->d_name);
-                snprintf(fullPath, sizeof(fullPath), "%s\\%s", destination_data.source_path, entry->d_name);
+                snprintf(fullPath, sizeof(fullPath), "%s%s", destination_data.source_path, entry->d_name);
+                fullPath[sizeof(fullPath) - 1] = '\0';
 
-                // Get file attributes
-                DWORD attrs = GetFileAttributes(fullPath);
-                if((attrs == INVALID_FILE_ATTRIBUTES) ||
-                    (attrs & FILE_ATTRIBUTE_DIRECTORY) ||
-                    (attrs & FILE_ATTRIBUTE_REPARSE_POINT)){
-                    /*
-                     * Skips file if it is a folder, symbolic or an invalid file
-                     * & (bitwise and) is used to check if a flag is set in the attributes, or when working with bitmasks
-                     * the constant are bitmasks, eg if attrs = 10111 and the bitmask is 00111 the result is 00111
-                     * if the resulting is non zero, then the attribute is set
-                     * == Is used to test for error or other stuff
-                     */
-                    // printf("a: %s\n",entry->d_name);
+                FILE* f = fopen(fullPath, "r");
+                if (f) { // File exists
+                    fclose(f);
+                } else {
                     continue;
                 }
+
                 if (!strcmp(entry->d_name, ".")|| !strcmp(entry->d_name, "..")) {
-                    // Skips current and parent directory (. & ..)
-                    // printf("b: %s\n",entry->d_name);
                     continue;
                 }
+
                 if(!strcmp(&entry->d_name[strlen(entry->d_name)-strlen(filter)],filter)){
                     char destination_file_path[32768];
 
-                    snprintf(destination_file_path, sizeof(destination_file_path), "%s\\%s", destination_data.destination_path, entry->d_name);
+                    snprintf(destination_file_path, sizeof(destination_file_path), "%s/%s", destination_data.destination_path, entry->d_name);
                     destination_file_path[sizeof(destination_file_path) - 1] = '\0';
-
                     // Check for duplicate, appends count to file name
                     int count = strlen(entry->d_name);
-                    char cur_file[count + 1];
+                    char cur_file[count+1];
 
                     strcpy(cur_file, entry->d_name);
                     while(count>0 && entry->d_name[count-1]!='.'){
                         count--;
                     }
                     if(strstr(entry->d_name, ".")){
-                        char extension[strlen(entry->d_name)-count + 1];
+                        char extension[strlen(entry->d_name)-count+1];
                         strncpy(extension,entry->d_name+count,strlen(entry->d_name)-count);
-                        extension[strlen(extension)]='\0';
+                        extension[strlen(entry->d_name)-count]='\0';
                         cur_file[count-1] = '\0'; //Cuts the file name to not include hte extension
 
                         count = 1;
                         // printf("Extension:%s\n",extension);
                         // printf("Cur_file:%s\n",cur_file);
                         while(!access(destination_file_path,F_OK)){
-                            snprintf(destination_file_path, sizeof(destination_file_path), "%s\\%s[%d].%s",
+                            snprintf(destination_file_path, sizeof(destination_file_path), "%s/%s[%d].%s",
                                      destination_data.destination_path, cur_file, count,extension);
                             count++;
                         }
@@ -410,13 +399,11 @@ int process(folderPair destination_data,char* filter,const char* filter_type) {
                         // printf("Destination path: %s\n",destination_file_path);
                     }else{
                         while(!access(destination_file_path,F_OK)){
-                            snprintf(destination_file_path, sizeof(destination_file_path), "%s\\%s[%d]",
+                            snprintf(destination_file_path, sizeof(destination_file_path), "%s/%s[%d]",
                                      destination_data.destination_path, cur_file, count);
                             count++;
                         }
                     }
-                    // printf("Destination path: %s\n",destination_file_path);
-                    // printf("Full: %s\n",fullPath);
                     FILE *source_file = fopen(fullPath, "rb");
                     if(source_file == NULL){
                         return -2; // Source file cannot be opened
@@ -434,9 +421,10 @@ int process(folderPair destination_data,char* filter,const char* filter_type) {
                     while((bytes = fread(buffer, 1, BUFFER_SIZE, source_file)) > 0){
                         fwrite(buffer, 1, bytes, destination_file);
                     }
-                    remove(fullPath);
+
                     fclose(source_file);
                     fclose(destination_file);
+                    remove(fullPath);
                 }
             }
         }
@@ -452,7 +440,6 @@ int *get_destination_ids() {
         return 0;
     }
     sqlite3_stmt *stmt;
-
 
     if(sqlite3_prepare_v2(db,"SELECT COUNT(*) FROM destination",-1,&stmt,NULL)!=SQLITE_OK){
         return NULL;
@@ -610,8 +597,7 @@ int delete_entry(entry* prev_entry){
     return 0;
 }
 
-int write_entry(entry* entry_arg, bool from_update) { // SEE IF THERE IS TEH SAME DESTINATION LATER, IF THERE IS REJECT
-
+int write_entry(entry* entry_arg, bool from_update) {
     if(entry_arg->filter_count < 1){
         return -30;
     }
@@ -631,20 +617,23 @@ int write_entry(entry* entry_arg, bool from_update) { // SEE IF THERE IS TEH SAM
     }
     sqlite3_stmt* stmt;
     int destination_id, error_id;
-    if(sqlite3_prepare_v2(db,"SELECT COUNT(*) FROM destination WHERE folder_path = (?)",-1,&stmt,NULL)!=SQLITE_OK){
-        return -10;
+    if(!from_update){
+        if(sqlite3_prepare_v2(db,"SELECT COUNT(*) FROM destination WHERE folder_path = (?)",-1,&stmt,NULL)!=SQLITE_OK){
+            return -10;
+        }
+        if(sqlite3_bind_text(stmt,1,entry_arg->destination,-1,SQLITE_TRANSIENT)!=SQLITE_OK){
+            return -11;
+        }
+        if(sqlite3_step(stmt)!=SQLITE_ROW){
+            return -12;
+        }
+        if(sqlite3_column_int(stmt,0)>0){
+            return -200;
+        }
+
+        sqlite3_finalize(stmt);
+        stmt=NULL;
     }
-    if(sqlite3_bind_text(stmt,1,entry_arg->destination,-1,SQLITE_TRANSIENT)!=SQLITE_OK){
-        return -11;
-    }
-    if(sqlite3_step(stmt)!=SQLITE_ROW){
-        return -12;
-    }
-    if(sqlite3_column_int(stmt,0)>0){
-        return -200;
-    }
-    sqlite3_finalize(stmt);
-    stmt=NULL;
     int* source_ids = (int*)malloc(entry_arg->source_count * sizeof(int));
     int* filter_ids = (int*)malloc(entry_arg->filter_count * sizeof(int));
 
@@ -792,18 +781,26 @@ int update_entry(entry* entry_arg, entry* prev_entry){
         return -50;
     }
     sqlite3_stmt* stmt;
-    if(sqlite3_prepare_v2(db,"SELECT COUNT(*) FROM destination WHERE folder_path = (?)",-1,&stmt,NULL)!=SQLITE_OK){
-        return -10;
-    }
-    if(sqlite3_bind_text(stmt,1,entry_arg->destination,-1,SQLITE_TRANSIENT)!=SQLITE_OK){
-        return -11;
-    }
-    if(sqlite3_step(stmt)!=SQLITE_ROW){
-        return -12;
-    }
-    if(sqlite3_column_int(stmt,0)>0){
-        return -200;
-    }
+    // if(sqlite3_prepare_v2(db,"SELECT COUNT(*) FROM destination WHERE folder_path = (?)",-1,&stmt,NULL)!=SQLITE_OK){
+    //     return -10;
+    // }
+    // printf("SQL: SELECT COUNT(*) FROM destination WHERE folder_path = '%s'\n", entry_arg->destination);
+    // fflush(stdout);
+    // printf("%s",entry_arg->destination);
+    // fflush(stdout);
+    // if(sqlite3_bind_text(stmt,1,entry_arg->destination,-1,SQLITE_TRANSIENT)!=SQLITE_OK){
+    //     return -11;
+    // }
+    // if(sqlite3_step(stmt)!=SQLITE_ROW){
+    //     return -12;
+    // }
+    // printf("SQL: '%d'\n", sqlite3_column_int(stmt,0));
+    // fflush(stdout);
+    // if(sqlite3_column_int(stmt,0)>0){
+    //     printf("SQL: '%d'\n", sqlite3_column_int(stmt,0));
+    //     fflush(stdout);
+    //     return -200;
+    // }
     sqlite3_finalize(stmt);
     stmt=NULL;
     if(sqlite3_prepare_v2(db,"UPDATE destination SET folder_path=(?) WHERE folder_path=(?) RETURNING folder_id",-1,&stmt,NULL)!=SQLITE_OK){
@@ -1102,9 +1099,11 @@ filterPair* get_filters(char* destination_folder, int* size){
 }
 
 int destination(int id, char *path){
-    if(connect_db()==0){
-        return 0;
-    }
+    // if(connect_db()==0){
+    //     return 0;
+    // }
+    printf("path: %s\n",path);
+    fflush(stdout);
     sqlite3_stmt *stmt;
     const char* destination_query="SELECT destination.folder_path, destination.folder_id "
                               "FROM destination "
@@ -1125,8 +1124,10 @@ int destination(int id, char *path){
         sqlite3_stmt *stmt2;
 
         if(sqlite3_prepare_v2(db,"SELECT filters.filter, filters.filter_type FROM filters INNER JOIN link ON "
-                                   "link.filter_id=filters.filter_id WHERE link.source_folder_id = (?) AND"
+                                   "link.filter_id=filters.filter_id WHERE link.source_folder_id = (?) AND "
                                    "link.destination_folder_id = (?)",-1,&stmt2,NULL)!=SQLITE_OK){
+            fprintf(stderr, "SQLite prepare error: %s\n", sqlite3_errmsg(db));
+            fflush(stderr);
             sqlite3_finalize(stmt);
             return -3;
         }
@@ -1146,7 +1147,8 @@ int destination(int id, char *path){
 
             if (!filter_value) filter_value = "";
             if (!filter_type) filter_type = "";
-
+            printf("%s",filter_value);
+            fflush(stdout);
             process(data, filter_value, filter_type);
         }
         sqlite3_finalize(stmt2);
@@ -1164,9 +1166,9 @@ int main_script(){
     while (sqlite3_step(stmt) == SQLITE_ROW) {
         int id = sqlite3_column_int(stmt, 0);
         char *path = (char *)sqlite3_column_text(stmt, 1);
-        destination(id, path);
+        printf("%d",destination(id, path));
         printf("ID: %d, Path: %s\n", id, path);
-
+        fflush(stdout);
     }
     sqlite3_finalize(stmt);
     return 0;

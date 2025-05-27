@@ -3,6 +3,11 @@
 
 #include <QMainWindow>
 #include "rule_set_container.h"
+#include <QSystemTrayIcon>
+#include <QMenu>
+#include <QAction>
+#include <QIcon>
+#include <QCloseEvent>
 extern "C" {
 #include "script.h"
 }
@@ -26,8 +31,15 @@ public:
 private:
     Ui::MainWindow *ui;
     QWidget *containerWidget;
-
-
+    void updateInterval();
+    void updateMinimize();
+    QSystemTrayIcon *trayIcon;
+    QMenu *trayIconMenu;
+    QAction *restoreAction;
+    QAction *quitAction;
+protected:
+    void closeEvent(QCloseEvent *event) override;
+    void changeEvent(QEvent *event) override;
 private slots:
     void openCreateWindow();
 
