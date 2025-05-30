@@ -7,8 +7,60 @@
 #include <nlohmann/json.hpp>
 #include <fstream>
 #include <QStyle>
+#include "winnls.h"
+#include "shobjidl.h"
+#include "objbase.h"
+#include "objidl.h"
+#include "shlguid.h"
+#include <qdir.h>
+#include <shlobj.h>
 
 using json = nlohmann::json;
+
+
+HRESULT CreateLink(LPCWSTR lpszPathObj, LPCSTR lpszPathLink, LPCWSTR lpszDesc)
+{ // yea idk man https://stackoverflow.com/questions/3906974/how-to-programmatically-create-a-shortcut-using-win32
+    HRESULT hres;
+    IShellLink* psl;
+
+    // Get a pointer to the IShellLink interface. It is assumed that CoInitialize
+    // has already been called.
+    hres = CoCreateInstance(CLSID_ShellLink, NULL, CLSCTX_INPROC_SERVER, IID_IShellLink, (LPVOID*)&psl);
+    if (SUCCEEDED(hres))
+    {
+        IPersistFile* ppf;
+
+        // Set the path to the shortcut target and add the description.
+        psl->SetPath(lpszPathObj);
+        psl->SetDescription(lpszDesc);
+
+        // Query IShellLink for the IPersistFile interface, used for saving the
+        // shortcut in persistent storage.
+        hres = psl->QueryInterface(IID_IPersistFile, (LPVOID*)&ppf);
+
+        if (SUCCEEDED(hres))
+        {
+            WCHAR wsz[MAX_PATH];
+
+            // Ensure that the string is Unicode.
+            MultiByteToWideChar(CP_ACP, 0, lpszPathLink, -1, wsz, MAX_PATH);
+
+            // Save the link by calling IPersistFile::Save.
+            hres = ppf->Save(wsz, TRUE);
+            ppf->Release();
+        }
+        psl->Release();
+    }
+    return hres;
+}
+QString getStartupShortcutPath(const QString &shortcutName) {
+    wchar_t path[MAX_PATH];
+    if (SUCCEEDED(SHGetFolderPathW(NULL, CSIDL_STARTUP, NULL, 0, path))) {
+        QString startupPath = QString::fromWCharArray(path);
+        return QDir(startupPath).filePath(shortcutName + ".lnk");
+    }
+    return QString();
+}
 
 class ScriptThread : public QThread {
     void run() override {
@@ -19,6 +71,17 @@ class ScriptThread : public QThread {
             file >> j;
             main_script();
             int interval = j["interval"].get<int>() < 5 ? 5 : j["interval"].get<int>();
+            if(j["minimize"]){
+                QString executable_path = QCoreApplication::applicationFilePath();
+                QString exe_name = QFileInfo(QCoreApplication::applicationFilePath()).baseName();
+                QString shortcut_path = getStartupShortcutPath(exe_name);
+
+                if (!QFile::exists(shortcut_path)) {
+                    CreateLink(reinterpret_cast<LPCWSTR>(executable_path.utf16()),
+                               shortcut_path.toStdString().c_str(),
+                               L"organizer");
+                }
+            }
             QThread::sleep(60*interval);
         }
     }
