@@ -2,14 +2,14 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
-#include "rule_set_container.h"
+#include "./rule_set_container.h"
 #include <QSystemTrayIcon>
 #include <QMenu>
 #include <QAction>
 #include <QIcon>
 #include <QCloseEvent>
 extern "C" {
-#include "script.h"
+#include "../../script.h"
 }
 
 

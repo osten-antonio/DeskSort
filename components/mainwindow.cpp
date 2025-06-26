@@ -1,7 +1,7 @@
-#include "mainwindow.h"
-#include "./ui_mainwindow.h"
+#include "./headers/mainwindow.h"
+#include "ui_mainwindow.h"
 #include <QPushButton>
-#include "rulesetCreate.h"
+#include "./headers/rulesetCreate.h"
 #include <QDebug>
 #include <QThread>
 #include <nlohmann/json.hpp>

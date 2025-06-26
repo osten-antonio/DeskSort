@@ -1,7 +1,7 @@
-#include "rule_set_container.h"
+#include "./headers/rule_set_container.h"
 #include <QTextEdit>
-#include "rulesetcreate.h"
-#include "mainwindow.h"
+#include "./headers/rulesetcreate.h"
+#include "./headers/mainwindow.h"
 
 rule_set_container::rule_set_container(MainWindow* parent, int top, int left)
     : QWidget(parent),

@@ -5,10 +5,10 @@
 #include <vector>
 #include <string>
 #include <QVBoxLayout>
-#include "clickableframe.h"
+#include "./clickableframe.h"
 #include <QTextEdit>
 extern "C" {
-#include "script.h" // write_entry and update_entry
+#include "../../script.h" // write_entry and update_entry
 }
 
 

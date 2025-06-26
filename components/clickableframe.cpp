@@ -1,4 +1,4 @@
-#include "ClickableFrame.h"
+#include "./headers/ClickableFrame.h"
 
 
 ClickableFrame::ClickableFrame(QWidget *parent)

@@ -9,7 +9,7 @@
 #include <QLineEdit>
 #include <QVBoxLayout>
 extern "C"{
-#include "script.h"
+#include "../../script.h"
 }
 
 class MainWindow;

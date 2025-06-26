@@ -1,4 +1,4 @@
-#include "editfilterscreen.h"
+#include "./headers/editfilterscreen.h"
 #include "ui_editfilterscreen.h"
 #include <QPushButton>
 #include <qDebug>

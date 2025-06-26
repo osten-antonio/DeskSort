@@ -2,8 +2,8 @@
 #define FILTERCREATE_H
 
 #include <QDialog>
-#include "rulesetcreate.h"
-#include "clickableframe.h"
+#include "./rulesetcreate.h"
+#include "./clickableframe.h"
 #include <QLabel>
 #include <QTextEdit>
 

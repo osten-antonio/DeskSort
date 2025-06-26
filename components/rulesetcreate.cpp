@@ -1,10 +1,10 @@
-#include "rulesetcreate.h"
+#include "./headers/rulesetcreate.h"
 #include "ui_rulesetcreate.h"
 #include <string>
 #include <vector>
-#include "filtercreate.h"
+#include "./headers/filtercreate.h"
 #include <algorithm>
-#include "editfilterscreen.h"
+#include "./headers/editfilterscreen.h"
 #include <QMessageBox>
 #include <QFileDialog>
 

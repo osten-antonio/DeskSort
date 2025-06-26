@@ -1,10 +1,10 @@
-#include "filtercreate.h"
+#include "./headers/filtercreate.h"
 #include "ui_filtercreate.h"
-#include "rulesetcreate.h"
+#include "./headers/rulesetcreate.h"
 #include <QVBoxLayout>
 #include <QFrame>
 #include <QTextEdit>
-#include "clickableframe.h"
+#include "./headers/clickableframe.h"
 #include <QMessageBox>
 
 filtercreate::filtercreate(rulesetCreate *create_screen,QWidget *parent)

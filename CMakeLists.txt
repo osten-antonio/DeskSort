@@ -25,16 +25,36 @@ FetchContent_MakeAvailable(json)
 
 
 set(PROJECT_SOURCES
-        main.cpp
-        mainwindow.cpp
-        mainwindow.h
-        mainwindow.ui
+    main.cpp
+    components/mainwindow.cpp
+    components/clickableframe.cpp
+    components/rule_set_container.cpp
+    components/rulesetcreate.cpp
+    components/filtercreate.cpp
+    components/editfilterscreen.cpp
+
+    components/headers/mainwindow.h
+    components/headers/clickableframe.h
+    components/headers/rule_set_container.h
+    components/headers/rulesetcreate.h
+    components/headers/filtercreate.h
+    components/headers/editfilterscreen.h
+
+    ui/mainwindow.ui
+    ui/editfilterscreen.ui
+    ui/filtercreate.ui
+    ui/rulesetcreate.ui
 )
 
 set(PROJECT_C_SOURCES
     script.c
     sqlite3.c
-    sqlite3.h
+)
+
+set(CMAKE_AUTOUIC_SEARCH_PATHS ui/)
+
+include_directories(
+    components/headers
 )
 
 
@@ -43,15 +63,11 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         MANUAL_FINALIZATION
         ${PROJECT_SOURCES}
         ${PROJECT_C_SOURCES}
-        rule_set_container.h rule_set_container.cpp
-        .gitignore
-        sqlite3.c sqlite3.h
-        rulesetcreate.h rulesetcreate.cpp rulesetcreate.ui
-        filtercreate.h filtercreate.cpp filtercreate.ui
-        editfilterscreen.h editfilterscreen.cpp editfilterscreen.ui
-        clickableframe.h clickableframe.cpp
+        ${PROJECT_UI}
         script.h
+        sqlite3.h
     )
+
 
 
 

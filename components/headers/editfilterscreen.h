@@ -2,7 +2,7 @@
 #define EDITFILTERSCREEN_H
 
 #include <QDialog>
-#include "rulesetcreate.h"
+#include "./rulesetCreate.h"
 
 namespace Ui {
 class editfilterscreen;
