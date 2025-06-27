@@ -7,6 +7,7 @@
 #include <nlohmann/json.hpp>
 #include <fstream>
 #include <QStyle>
+#include <windows.h>
 #include "winnls.h"
 #include "shobjidl.h"
 #include "objbase.h"
@@ -16,10 +17,9 @@
 #include <shlobj.h>
 
 using json = nlohmann::json;
-
-
 HRESULT CreateLink(LPCWSTR lpszPathObj, LPCSTR lpszPathLink, LPCWSTR lpszDesc)
-{ // yea idk man https://stackoverflow.com/questions/3906974/how-to-programmatically-create-a-shortcut-using-win32
+{ // https://learn.microsoft.com/en-us/windows/win32/shell/links?redirectedfrom=MSDN#Shellink_Creating_Shortcut idk
+
     HRESULT hres;
     IShellLink* psl;
 
@@ -45,12 +45,16 @@ HRESULT CreateLink(LPCWSTR lpszPathObj, LPCSTR lpszPathLink, LPCWSTR lpszDesc)
             // Ensure that the string is Unicode.
             MultiByteToWideChar(CP_ACP, 0, lpszPathLink, -1, wsz, MAX_PATH);
 
+            // Add code here to check return value from MultiByteWideChar
+            // for success.
+
             // Save the link by calling IPersistFile::Save.
             hres = ppf->Save(wsz, TRUE);
             ppf->Release();
         }
         psl->Release();
     }
+    qDebug() << QString::number(hres, 16);
     return hres;
 }
 QString getStartupShortcutPath(const QString &shortcutName) {
@@ -64,22 +68,21 @@ QString getStartupShortcutPath(const QString &shortcutName) {
 
 class ScriptThread : public QThread {
     void run() override {
+        CoInitialize(nullptr);
         while(true){
-            qDebug() << "ran";
-            std::ifstream file("config.json");
+            std::ifstream file("./data/config.json");
             json j;
             file >> j;
             main_script();
             int interval = j["interval"].get<int>() < 5 ? 5 : j["interval"].get<int>();
-            if(j["minimize"]){
+            if(j["start_boot"]){
                 QString executable_path = QCoreApplication::applicationFilePath();
                 QString exe_name = QFileInfo(QCoreApplication::applicationFilePath()).baseName();
                 QString shortcut_path = getStartupShortcutPath(exe_name);
-
                 if (!QFile::exists(shortcut_path)) {
                     CreateLink(reinterpret_cast<LPCWSTR>(executable_path.utf16()),
                                shortcut_path.toStdString().c_str(),
-                               L"organizer");
+                               L"desksort");
                 }
             }
             QThread::sleep(60*interval);
@@ -93,8 +96,10 @@ MainWindow::MainWindow(QWidget *parent)
     , ui(new Ui::MainWindow),
     containerWidget(new QWidget())
 {
+
     ui->setupUi(this);
-    std::ifstream file("config.json");
+    this->setWindowTitle("DeskSort");
+    std::ifstream file("./data/config.json");
     json j;
     file >> j;
     ui->interval->setValue(j["interval"].get<int>() < 5 ? 5 : j["interval"].get<int>());
@@ -102,7 +107,7 @@ MainWindow::MainWindow(QWidget *parent)
     drawEntries();
     ui->mainScroll->setWidget(containerWidget);
     ui->mainScroll->setWidgetResizable(true);
-
+    ui->startOnBoot->setChecked(j["start_boot"].get<bool>());
     trayIconMenu = new QMenu(this);
     QAction *restoreAction = new QAction("Restore", this);
     QAction *quitAction = new QAction("Quit", this);
@@ -114,8 +119,9 @@ MainWindow::MainWindow(QWidget *parent)
     trayIconMenu->addAction(quitAction);
 
     trayIcon = new QSystemTrayIcon(this);
-    QIcon icon = style()->standardIcon(QStyle::SP_ComputerIcon);
-    trayIcon->setIcon(icon);
+    QIcon icon(QCoreApplication::applicationDirPath() +"/icon.ico");
+    this->setWindowIcon(icon);
+    trayIcon->setIcon(QIcon(icon.pixmap(16, 16)));
     trayIcon->setContextMenu(trayIconMenu);
     trayIcon->setToolTip("Organizer");
     trayIcon->show();
@@ -131,7 +137,18 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(ui->newRuleset,&QPushButton::clicked,this,&MainWindow::openCreateWindow);
     connect(ui->interval, QOverload<int>::of(&QSpinBox::valueChanged), this, &MainWindow::updateInterval);
-    connect(ui->minimizeOnClose, &QCheckBox::toggled,this, &MainWindow::updateMinimize);
+    connect(ui->minimizeOnClose, &QCheckBox::toggled,this, [=](){
+        this->updateCheck("minimize");
+    });
+    connect(ui->startOnBoot, &QCheckBox::toggled,this, [=](){
+        this->updateCheck("start_boot");
+        if(!ui->startOnBoot->isChecked()){
+            QString shortcutPath = getStartupShortcutPath(QFileInfo(QCoreApplication::applicationFilePath()).baseName());
+            if (QFile::exists(shortcutPath)) {
+                QFile::remove(shortcutPath);
+            }
+        }
+    });
     ScriptThread *thread = new ScriptThread();
     thread->start();
 }
@@ -142,7 +159,15 @@ MainWindow::~MainWindow() {
 void MainWindow::closeEvent(QCloseEvent *event)
 {
 
-    std::ifstream file("config.json");
+    std::ifstream file("./data/config.json");
+    if (!file.is_open()) {
+        qDebug() << "Could not open config.json";
+        return;
+    }
+    if (file.peek() == std::ifstream::traits_type::eof()) {
+        qDebug() << "config.json is empty";
+        return;
+    }
     json j;
     file >> j;
     if(j["minimize"].get<bool>()){
@@ -166,17 +191,23 @@ void MainWindow::changeEvent(QEvent *event) {
     QMainWindow::changeEvent(event);
 }
 
-
-void MainWindow::updateMinimize(){
-    std::ifstream inputFile("config.json");
+void MainWindow::updateCheck(std::string key){
+    std::ifstream inputFile("./data/config.json");
     if (!inputFile.is_open()) {
         return;
     }
+
     json j;
     inputFile >> j;
     inputFile.close();
-    j["minimize"]=ui->minimizeOnClose->isChecked();
-    std::ofstream outputFile("config.json");
+    if(key.compare("start_boot")==0){
+        j["start_boot"]=ui->startOnBoot->isChecked();
+    }
+    if(key.compare("minimize")==0){
+        j["minimize"]=ui->minimizeOnClose->isChecked();
+    }
+
+    std::ofstream outputFile("./data/config.json");
 
     if (outputFile.is_open()) {
         outputFile << j.dump(4);
@@ -186,9 +217,11 @@ void MainWindow::updateMinimize(){
     }
 }
 
+
+
 void MainWindow::updateInterval(){
     qDebug() << "Pressed";
-    std::ifstream inputFile("config.json");
+    std::ifstream inputFile("./data/config.json");
     if (!inputFile.is_open()) {
         qDebug() << "Could not open config.json for reading.";
         return;
@@ -197,7 +230,7 @@ void MainWindow::updateInterval(){
     inputFile >> j;
     inputFile.close();
     j["interval"]=ui->interval->value();
-    std::ofstream outputFile("config.json");
+    std::ofstream outputFile("./data/config.json");
 
     if (outputFile.is_open()) {
         outputFile << j.dump(4);

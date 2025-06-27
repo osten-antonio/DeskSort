@@ -32,11 +32,11 @@ private:
     Ui::MainWindow *ui;
     QWidget *containerWidget;
     void updateInterval();
-    void updateMinimize();
     QSystemTrayIcon *trayIcon;
     QMenu *trayIconMenu;
     QAction *restoreAction;
     QAction *quitAction;
+    void updateCheck(std::string key);
 protected:
     void closeEvent(QCloseEvent *event) override;
     void changeEvent(QEvent *event) override;

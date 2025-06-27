@@ -4,7 +4,7 @@
 
 sqlite3 *db;
 int connect_db(){
-    int rc = sqlite3_open("entries.db", &db);
+    int rc = sqlite3_open("./data/entries.db", &db);
     if(rc){
         return rc;
     }
@@ -22,7 +22,7 @@ int process(folderPair destination_data,char* filter,const char* filter_type) {
         return -1; // Source cannot be opened
     }
     printf("%s",filter_type);
-    fflush(stdout);
+    //fflush(stdout);
     if(!strcmp(filter_type,"Prefix")){
         struct dirent *entry;
         while ((entry = readdir(dir)) != NULL) {
@@ -130,7 +130,6 @@ int process(folderPair destination_data,char* filter,const char* filter_type) {
     }else if(!strcmp(filter_type,"Suffix")){
         struct dirent *entry;
         while ((entry = readdir(dir)) != NULL) {
-            if(entry->d_name!=NULL){
                 printf("Cehcking: %s\n",entry->d_name);
                 char fullPath[32768];
                 snprintf(fullPath, sizeof(fullPath), "%s%s", destination_data.source_path, entry->d_name);
@@ -185,44 +184,43 @@ int process(folderPair destination_data,char* filter,const char* filter_type) {
                         count = 1;
                         // printf("Extension:%s\n",extension);
                         // printf("Cur_file:%s\n",cur_file);
-                        while(!access(destination_file_path,F_OK)){
-                            snprintf(destination_file_path, sizeof(destination_file_path), "%s\\%s[%d].%s",
-                                     destination_data.destination_path, cur_file, count,extension);
-                            count++;
-                        }
-                        // printf("Duplicated file: %s\n",destination_file_path);
-                        // printf("Destination path: %s\n",destination_file_path);
-                    }else{
-                        while(!access(destination_file_path,F_OK)){
-                            snprintf(destination_file_path, sizeof(destination_file_path), "%s\\%s[%d]",
-                                     destination_data.destination_path, cur_file, count);
-                            count++;
-                        }
+                    while(!access(destination_file_path,F_OK)){
+                        snprintf(destination_file_path, sizeof(destination_file_path), "%s\\%s[%d].%s",
+                                 destination_data.destination_path, cur_file, count,extension);
+                        count++;
                     }
-
-
-                    FILE *source_file = fopen(fullPath, "rb");
-                    if(source_file == NULL){
-                        return -2; // Source file cannot be opened
-                    }
-
-                    FILE *destination_file = fopen(destination_file_path, "wb");
-                    if(destination_file == NULL){
-                        fclose(source_file);
-                        return -3;
-                    }
-
-                    unsigned char buffer[BUFFER_SIZE];
-                    size_t bytes;
+                    // printf("Duplicated file: %s\n",destination_file_path);
                     // printf("Destination path: %s\n",destination_file_path);
-                    while((bytes = fread(buffer, 1, BUFFER_SIZE, source_file)) > 0){
-                        fwrite(buffer, 1, bytes, destination_file);
+                }else{
+                    while(!access(destination_file_path,F_OK)){
+                        snprintf(destination_file_path, sizeof(destination_file_path), "%s\\%s[%d]",
+                                destination_data.destination_path, cur_file, count);
+                        count++;
                     }
-
-                    fclose(source_file);
-                    fclose(destination_file);
-                    remove(fullPath);
                 }
+
+
+                FILE *source_file = fopen(fullPath, "rb");
+                if(source_file == NULL){
+                    return -2; // Source file cannot be opened
+                }
+
+                FILE *destination_file = fopen(destination_file_path, "wb");
+                if(destination_file == NULL){
+                    fclose(source_file);
+                    return -3;
+                }
+                unsigned char buffer[BUFFER_SIZE];
+                size_t bytes;
+                // printf("Destination path: %s\n",destination_file_path);
+                while((bytes = fread(buffer, 1, BUFFER_SIZE, source_file)) > 0){
+                    fwrite(buffer, 1, bytes, destination_file);
+                }
+
+                fclose(source_file);
+                fclose(destination_file);
+                remove(fullPath);
+
             }
         }
 
@@ -785,9 +783,9 @@ int update_entry(entry* entry_arg, entry* prev_entry){
     //     return -10;
     // }
     // printf("SQL: SELECT COUNT(*) FROM destination WHERE folder_path = '%s'\n", entry_arg->destination);
-    // fflush(stdout);
+    // //fflush(stdout);
     // printf("%s",entry_arg->destination);
-    // fflush(stdout);
+    // //fflush(stdout);
     // if(sqlite3_bind_text(stmt,1,entry_arg->destination,-1,SQLITE_TRANSIENT)!=SQLITE_OK){
     //     return -11;
     // }
@@ -795,14 +793,12 @@ int update_entry(entry* entry_arg, entry* prev_entry){
     //     return -12;
     // }
     // printf("SQL: '%d'\n", sqlite3_column_int(stmt,0));
-    // fflush(stdout);
+    // //fflush(stdout);
     // if(sqlite3_column_int(stmt,0)>0){
     //     printf("SQL: '%d'\n", sqlite3_column_int(stmt,0));
-    //     fflush(stdout);
+    //     //fflush(stdout);
     //     return -200;
     // }
-    sqlite3_finalize(stmt);
-    stmt=NULL;
     if(sqlite3_prepare_v2(db,"UPDATE destination SET folder_path=(?) WHERE folder_path=(?) RETURNING folder_id",-1,&stmt,NULL)!=SQLITE_OK){
         sqlite3_finalize(stmt);
         return -11;
@@ -1103,7 +1099,7 @@ int destination(int id, char *path){
     //     return 0;
     // }
     printf("path: %s\n",path);
-    fflush(stdout);
+    //fflush(stdout);
     sqlite3_stmt *stmt;
     const char* destination_query="SELECT destination.folder_path, destination.folder_id "
                               "FROM destination "
@@ -1127,7 +1123,7 @@ int destination(int id, char *path){
                                    "link.filter_id=filters.filter_id WHERE link.source_folder_id = (?) AND "
                                    "link.destination_folder_id = (?)",-1,&stmt2,NULL)!=SQLITE_OK){
             fprintf(stderr, "SQLite prepare error: %s\n", sqlite3_errmsg(db));
-            fflush(stderr);
+            //fflush(stderr);
             sqlite3_finalize(stmt);
             return -3;
         }
@@ -1148,7 +1144,7 @@ int destination(int id, char *path){
             if (!filter_value) filter_value = "";
             if (!filter_type) filter_type = "";
             printf("%s",filter_value);
-            fflush(stdout);
+            //fflush(stdout);
             process(data, filter_value, filter_type);
         }
         sqlite3_finalize(stmt2);
@@ -1168,7 +1164,7 @@ int main_script(){
         char *path = (char *)sqlite3_column_text(stmt, 1);
         printf("%d",destination(id, path));
         printf("ID: %d, Path: %s\n", id, path);
-        fflush(stdout);
+        //fflush(stdout);
     }
     sqlite3_finalize(stmt);
     return 0;

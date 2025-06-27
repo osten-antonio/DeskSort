@@ -5,7 +5,7 @@
 
 editfilterscreen::editfilterscreen(rulesetCreate *creationscreen, QString filter_to_edit, QString type_to_edit,QWidget *parent)
     : QDialog(parent)
-    , ui(new Ui::editfilterscreen)
+    , ui(new Ui::editfilterscreen), creationscreen(creationscreen)
 {
     ui->setupUi(this);
     setFilter(creationscreen->getSelectedFilter());
@@ -42,7 +42,7 @@ void editfilterscreen::confirmedit(){
     //add validation later
     setFilter(ui->lineEdit->text());
     setType(ui->comboBox->currentText());
-    this->creationscreen->setSelectedFilter(ui->lineEdit->text());
-    this->creationscreen->setSelectedType(ui->comboBox->currentText());
+    creationscreen->setSelectedFilter(ui->lineEdit->text());
+    creationscreen->setSelectedType(ui->comboBox->currentText());
     this->accept();
 }

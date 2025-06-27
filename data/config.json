@@ -1,5 +1,5 @@
 {
   "minimize": false,
-  "start_boot": false,
+  "start_boot": true,
   "interval": 5
 }

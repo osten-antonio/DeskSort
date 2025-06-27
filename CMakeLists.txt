@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(organizer VERSION 0.1 LANGUAGES CXX C)
+project(desksort VERSION 0.1 LANGUAGES CXX C)
 
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTOMOC ON)
@@ -22,7 +22,7 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(json)
 
-
+enable_language(RC)
 
 set(PROJECT_SOURCES
     main.cpp
@@ -44,6 +44,8 @@ set(PROJECT_SOURCES
     ui/editfilterscreen.ui
     ui/filtercreate.ui
     ui/rulesetcreate.ui
+
+
 )
 
 set(PROJECT_C_SOURCES
@@ -53,17 +55,23 @@ set(PROJECT_C_SOURCES
 
 set(CMAKE_AUTOUIC_SEARCH_PATHS ui/)
 
+file(COPY ${CMAKE_SOURCE_DIR}/data DESTINATION ${CMAKE_BINARY_DIR})
+
+
 include_directories(
     components/headers
 )
 
 
+
+
+
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
-    qt_add_executable(organizer
+    qt_add_executable(desksort
         MANUAL_FINALIZATION
         ${PROJECT_SOURCES}
         ${PROJECT_C_SOURCES}
-        ${PROJECT_UI}
+        ${APP_ICON_RESOURCE_WINDOWS}
         script.h
         sqlite3.h
     )
@@ -71,37 +79,36 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
 
 
 
-
 # Define target properties for Android with Qt 6 as:
-#    set_property(TARGET organizer APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR
+#    set_property(TARGET desksort APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR
 #                 ${CMAKE_CURRENT_SOURCE_DIR}/android)
 # For more information, see https://doc.qt.io/qt-6/qt-add-executable.html#target-creation
 else()
     if(ANDROID)
-        add_library(organizer SHARED
+        add_library(desksort SHARED
             ${PROJECT_SOURCES}
         )
 # Define properties for Android with Qt 5 after find_package() calls as:
 #    set(ANDROID_PACKAGE_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/android")
     else()
-        add_executable(organizer
+        add_executable(desksort
             ${PROJECT_SOURCES}
         )
     endif()
 endif()
 
-target_sources(organizer PRIVATE
+target_sources(desksort PRIVATE
     ${PROJECT_SOURCES}
     ${PROJECT_C_SOURCES})
 # find_library(SQLITE3_LIB sqlite3 PATHS C:/MinGW/include)
-target_link_libraries(organizer PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
+target_link_libraries(desksort PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
 
 
-target_link_libraries(organizer PRIVATE nlohmann_json::nlohmann_json)
+target_link_libraries(desksort PRIVATE nlohmann_json::nlohmann_json)
 
 if(MSVC) # Check if using Microsoft Visual C++ compiler
     set_target_properties(your_target_name PROPERTIES
-        RESOURCE "${CMAKE_CURRENT_SOURCE_DIR}/organizer.manifest"
+        RESOURCE "${CMAKE_CURRENT_SOURCE_DIR}/desksort.manifest"
     )
 endif()
 
@@ -109,9 +116,9 @@ endif()
 # If you are developing for iOS or macOS you should consider setting an
 # explicit, fixed bundle identifier manually though.
 if(${QT_VERSION} VERSION_LESS 6.1.0)
-  set(BUNDLE_ID_OPTION MACOSX_BUNDLE_GUI_IDENTIFIER com.example.organizer)
+  set(BUNDLE_ID_OPTION MACOSX_BUNDLE_GUI_IDENTIFIER com.example.desksort)
 endif()
-set_target_properties(organizer PROPERTIES
+set_target_properties(desksort PROPERTIES
     ${BUNDLE_ID_OPTION}
     MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
     MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
@@ -120,12 +127,12 @@ set_target_properties(organizer PROPERTIES
 )
 
 include(GNUInstallDirs)
-install(TARGETS organizer
+install(TARGETS desksort
     BUNDLE DESTINATION .
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 
 if(QT_VERSION_MAJOR EQUAL 6)
-    qt_finalize_executable(organizer)
+    qt_finalize_executable(desksort)
 endif()
