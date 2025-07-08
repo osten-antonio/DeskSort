@@ -36,8 +36,7 @@ Get the latest build from the [GitHub Releases](https://github.com/osten-antonio
 
 ## Demo
 
-Uploading demovid (1).mp4…
-
+https://github.com/user-attachments/assets/f99dbd24-f61b-416b-9cc9-6bec48f4850f
 
 ## Contributing
 
