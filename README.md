@@ -26,15 +26,19 @@ It repeats this for every minute interval you set, and it starts on startup.
 
 ## Future plans
 - Fix UI elements, make it more clear for each action the user does (Selecting, etc)
-- Optimize code
+- Optimize code maybe
 - Cross platform maybe
 - Prevent users from adding dangerous system folders as source paths.
+- Properly name and set icons for windows other than the main window
 
 ## Downloads
 Get the latest build from the [GitHub Releases](https://github.com/osten-antonio/DeskSort/releases) page.
 
 ## Demo
-TBA
+
+Uploading demovid (1).mp4…
+
+
 ## Contributing
 
 Contributions are always welcome!
