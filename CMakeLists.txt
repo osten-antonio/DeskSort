@@ -97,7 +97,7 @@ else()
     endif()
 endif()
 
-target_sources(desksort PRIVATE
+target_sources(organizer PRIVATE
     ${PROJECT_SOURCES}
     ${PROJECT_C_SOURCES})
 # find_library(SQLITE3_LIB sqlite3 PATHS C:/MinGW/include)
@@ -107,7 +107,7 @@ target_link_libraries(desksort PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
 target_link_libraries(desksort PRIVATE nlohmann_json::nlohmann_json)
 
 if(MSVC) # Check if using Microsoft Visual C++ compiler
-    set_target_properties(your_target_name PROPERTIES
+    set_target_properties(desksort PROPERTIES
         RESOURCE "${CMAKE_CURRENT_SOURCE_DIR}/desksort.manifest"
     )
 endif()
