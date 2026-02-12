@@ -97,7 +97,7 @@ else()
     endif()
 endif()
 
-target_sources(organizer PRIVATE
+target_sources(desksort PRIVATE
     ${PROJECT_SOURCES}
     ${PROJECT_C_SOURCES})
 # find_library(SQLITE3_LIB sqlite3 PATHS C:/MinGW/include)
