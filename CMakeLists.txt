@@ -107,9 +107,14 @@ target_link_libraries(desksort PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
 target_link_libraries(desksort PRIVATE nlohmann_json::nlohmann_json)
 
 if(MSVC) # Check if using Microsoft Visual C++ compiler
-    set_target_properties(desksort PROPERTIES
-        RESOURCE "${CMAKE_CURRENT_SOURCE_DIR}/desksort.manifest"
-    )
+    if(NOT DEFINED ENV{GITHUB_ACTIONS}) # Check if in github environment, only attach UAC locally
+        set_target_properties(desksort PROPERTIES
+            RESOURCE "${CMAKE_CURRENT_SOURCE_DIR}/organizer.manifest"
+        )
+        message(STATUS "Non-CI build: Attaching Administrator Manifest")
+    else()
+        message(STATUS "CI build detected: Skipping Administrator Manifest to allow testing")
+    endif()
 endif()
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
@@ -131,6 +136,7 @@ install(TARGETS desksort
     BUNDLE DESTINATION .
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    RESOURCE DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 
 if(QT_VERSION_MAJOR EQUAL 6)
